@@ -2,15 +2,21 @@ pub mod wallet;
 
 #[cfg(test)]
 mod tests {
+    use bip39::Mnemonic;
+
     use crate::wallet::HDSeed;
     use crate::wallet::HDWallet;
 
     #[test]
     fn test_wallet() {
-
-        let phrase = "";
-        let hdw_eth = HDWallet::Ethereum(HDSeed::new(phrase));
-        let hdw_tron = HDWallet::Tron(HDSeed::new(phrase));
+        let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
+        let phrase = a.into_phrase();
+        println!("=======================");
+        println!("phrase: {:?}",&phrase);
+        println!("=======================");
+        
+        let hdw_eth = HDWallet::Ethereum(HDSeed::new(&phrase));
+        let hdw_tron = HDWallet::Tron(HDSeed::new(&phrase));
  
         for i in 0..2 {
             let eth_i = hdw_eth.address(i as i32);

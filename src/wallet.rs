@@ -291,6 +291,9 @@ fn get_private(
 
 fn eth_sign(seed: &HDSeed, index: i32) -> String {
     let hd_path_str = format!("m/44'/60'/0'/0/{index}");
+   // let transport = web3::transports::Http::new("https://rinkeby.infura.io/v3/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")?;
+    //let web3 = web3::Web3::new(transport);
+   // let to = Address::from_str("0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX").unwrap();
     let seed_m = Seed::new(&seed.mnemonic, "");
     let (_privkey, pubk) = get_extended_keypair(
         seed_m.as_bytes(),
@@ -299,3 +302,10 @@ fn eth_sign(seed: &HDSeed, index: i32) -> String {
     pubk.public_key.to_string()
 }
 
+fn tron_sign(seed: &HDSeed, index: i32) -> String {
+    "lalala".to_owned()
+}
+
+fn stellar_sign(seed: &HDSeed, index: i32) -> String {
+    "lalala".to_owned()
+}
