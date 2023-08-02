@@ -13,6 +13,7 @@ use bitcoin::{
 use secp256k1::Secp256k1;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
+use web3::Web3;
 
 #[derive(Debug, Clone)]
 pub enum HDWallet {
@@ -308,4 +309,19 @@ fn tron_sign(seed: &HDSeed, index: i32) -> String {
 
 fn stellar_sign(seed: &HDSeed, index: i32) -> String {
     "lalala".to_owned()
+}
+
+fn eth_balance(seed: &HDSeed, index: i32) -> Vec<(String,web3::types::U256)> {
+    let a = vec![];
+    a 
+}
+
+fn trn_balance(seed: &HDSeed, index: i32) -> Vec<(String,web3::types::U256)> {
+    let a = vec![];
+    a 
+}
+
+fn stellar_balance(seed: &HDSeed, index: i32) -> Vec<(String,web3::types::U256)> {
+    let a = vec![];
+    a 
 }
