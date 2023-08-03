@@ -311,17 +311,17 @@ fn stellar_sign(seed: &HDSeed, index: i32) -> String {
     "lalala".to_owned()
 }
 
-fn eth_balance(seed: &HDSeed, index: i32) -> Vec<(String,web3::types::U256)> {
-    let a = vec![];
-    a 
+fn eth_balance(seed: &HDSeed, index: i32) -> (String,web3::types::U256) {
+    let transport = web3::transports::Http::new("https://rinkeby.infura.io/v3/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")?;
+    let web3 = web3::Web3::new(transport);
+    
+    ("".to_owned(),web3::types::U256::zero())
 }
 
-fn trn_balance(seed: &HDSeed, index: i32) -> Vec<(String,web3::types::U256)> {
-    let a = vec![];
-    a 
+fn trn_balance(seed: &HDSeed, index: i32) -> (String,web3::types::U256) {
+    ("".to_owned(),web3::types::U256::zero())
 }
 
-fn stellar_balance(seed: &HDSeed, index: i32) -> Vec<(String,web3::types::U256)> {
-    let a = vec![];
-    a 
+fn stellar_balance(seed: &HDSeed, index: i32) -> (String,web3::types::U256) {
+    ("".to_owned(),web3::types::U256::zero())
 }
