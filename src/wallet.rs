@@ -14,6 +14,9 @@ use secp256k1::Secp256k1;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
 use web3::Web3;
+use web3::types::H160;
+
+use log::*;
 
 #[derive(Debug, Clone)]
 pub enum HDWallet {
@@ -21,6 +24,15 @@ pub enum HDWallet {
     Tron(HDSeed),
     Stellar(HDSeed),
 }
+/* NTD proper errors
+#[derive(Debug, Clone)]
+pub enum Error {
+    #[error("Web3 error: {0}")]
+    Web3(#[from] web3::Error),
+    #[error("Hex error: {0}")]
+    Hex(#[from] rustc_hex::FromHexError),
+}*/
+
 
 #[derive(Debug, Clone) ]
 pub struct HDSeed {
@@ -67,6 +79,14 @@ impl HDWallet {
             HDWallet::Stellar(seed) => stellar_sign(seed, index),
         }
     }
+
+    pub async fn balance(&self, index: i32) -> (String, web3::types::U256) {
+        match self {
+            HDWallet::Ethereum(seed) => eth_balance(seed, index).await.unwrap(),
+            HDWallet::Tron(seed) => eth_balance(seed, index).await.unwrap(), //NTD total rework 
+            HDWallet::Stellar(seed) => eth_balance(seed, index).await.unwrap(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -110,6 +130,9 @@ fn eth_address_by_index(seed: &HDSeed, index: i32) -> String {
         &DerivationPath::from_str(&hd_path_str).unwrap(),
     );
     let eth_addr = extended_pubk_to_addr(&pubk);
+
+    info!("!!!!!!!!!!!!!!!");
+    info!("{:?}",eth_addr);
     eth_addr.get().to_owned()
 }
 
@@ -311,11 +334,17 @@ fn stellar_sign(seed: &HDSeed, index: i32) -> String {
     "lalala".to_owned()
 }
 
-fn eth_balance(seed: &HDSeed, index: i32) -> (String,web3::types::U256) {
-    let transport = web3::transports::Http::new("https://rinkeby.infura.io/v3/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")?;
+async fn eth_balance(seed: &HDSeed, index: i32) -> Result<(String,web3::types::U256),web3::Error> {
+    let transport = web3::transports::Http::new("https://rinkeby.infura.io/v3/62993b0fe3b2443794aae04c323b478d")?;
     let web3 = web3::Web3::new(transport);
-    
-    ("".to_owned(),web3::types::U256::zero())
+    let addr_str = eth_address_by_index(seed, index);
+    info!("=================");
+    info!("lalalal");
+    info!("{:?}", addr_str);
+    info!("=================");
+    let addr = H160::from_str(&addr_str).unwrap();
+    let bal = web3.eth().balance(addr, None).await.unwrap();
+    Ok((addr_str, bal))
 }
 
 fn trn_balance(seed: &HDSeed, index: i32) -> (String,web3::types::U256) {

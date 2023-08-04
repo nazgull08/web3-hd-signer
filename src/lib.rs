@@ -9,8 +9,8 @@ mod tests {
 
     #[test]
     fn test_wallet() {
-        let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
-        let phrase = a.into_phrase();
+//        let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
+        let phrase = "super ordinary tip dirt claim rhythm example learn beauty thing region faint"; //a.into_phrase();
         println!("=======================");
         println!("phrase: {:?}",&phrase);
         println!("=======================");
