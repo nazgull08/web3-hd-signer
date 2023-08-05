@@ -1,6 +1,13 @@
 use bip39::Mnemonic;
+use web3::types::{U256, H160};
 use web3_hd::wallet::{HDWallet, HDSeed};
 
+#[derive(Debug, Clone)]
+struct WalletAddress {
+    pub address : String,
+    pub balance : U256,
+    pub balance_token : (String, U256),
+}
 
 #[tokio::main]
 async fn main() {     
@@ -21,7 +28,9 @@ async fn test_wallet() {
 
     let usdt = "0x6BABFBA7200f683c267ce892C94e1e110Df390c7";
 
-    for i in 0..2 {
+    let mut wal_addrs: Vec<WalletAddress> = vec![];
+
+    for i in 0..5 {
         let eth_i = hdw_eth.address(i as i32);
         let tron_i = hdw_tron.address(i as i32);
         let eth_priv = hdw_eth.private(i as i32);
@@ -44,6 +53,12 @@ async fn test_wallet() {
         println!("priv: {:?}", tron_priv);
         println!("pub: {:?}", tron_pub);
         println!("=======================");
+
+        wal_addrs.push(WalletAddress { address: eth_i, balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) })
     }
+
+    println!("--------------------");
+    println!("Addrs: {:?}",wal_addrs);
+
 
 }
