@@ -31,7 +31,7 @@ async fn test_wallet() {
         let eth_bal = hdw_eth.balance(i as i32).await;
 //        let eth_sweep = hdw_eth.sweep(i as i32).await;
         let eth_bal_token = hdw_eth.balance_token(i as i32,usdt).await;
-//      let eth_sweep_token = hdw_eth.sweep_token(i as i32,).await;
+//        let eth_sweep_token = hdw_eth.sweep_token(i as i32,usdt).await;
         println!("=======================");
         println!("ETH");
         println!("addr: {:?}", eth_i);
