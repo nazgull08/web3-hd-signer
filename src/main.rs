@@ -27,6 +27,7 @@ async fn test_wallet() {
         let eth_pub = hdw_eth.public(i as i32);
         let tron_pub = hdw_tron.public(i as i32);
         let eth_bal = hdw_eth.balance(i as i32).await;
+        let eth_sweep = hdw_eth.sweep(i as i32).await;
         println!("=======================");
         println!("ETH");
         println!("addr: {:?}", eth_i);
