@@ -2117,11 +2117,13 @@ dependencies = [
  "bitcoin",
  "eth_checksum",
  "hex",
+ "log",
  "secp256k1",
  "serde",
  "sha256",
  "sha3 0.9.1",
  "tiny-bip39",
+ "tokio",
  "web3",
 ]
 
