@@ -28,7 +28,8 @@ async fn test_wallet() {
 
     let usdt = "0x6BABFBA7200f683c267ce892C94e1e110Df390c7";
 
-    let mut wal_addrs: Vec<WalletAddress> = vec![];
+    let mut wal_addrs_eth: Vec<WalletAddress> = vec![];
+    let mut wal_addrs_token: Vec<WalletAddress> = vec![];
 
     for i in 0..5 {
         let eth_i = hdw_eth.address(i as i32);
@@ -53,12 +54,17 @@ async fn test_wallet() {
         println!("priv: {:?}", tron_priv);
         println!("pub: {:?}", tron_pub);
         println!("=======================");
-
-        wal_addrs.push(WalletAddress { address: eth_i, balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) })
+        if eth_bal.1 > U256::zero() {
+            wal_addrs_eth.push(WalletAddress { address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) })
+        }
+        if eth_bal_token.1 > U256::zero() {
+            wal_addrs_token.push(WalletAddress { address: eth_i, balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) })
+        }
     }
 
     println!("--------------------");
-    println!("Addrs: {:?}",wal_addrs);
+    println!("Addrs: {:?}",wal_addrs_eth);
+    println!("Addrs: {:?}",wal_addrs_token);
 
 
 }
