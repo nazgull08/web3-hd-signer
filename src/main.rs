@@ -4,21 +4,32 @@ use web3_hd::wallet::{HDWallet, HDSeed};
 
 #[derive(Debug, Clone)]
 struct WalletAddress {
+    pub id : i32,
     pub address : String,
     pub balance : U256,
     pub balance_token : (String, U256),
 }
 
+//NTD
+// ETH gas usage 94,795 | 63,197 
+// BSC gas usage 76,654 | 51,103 
+// PLG gas usage 96,955 | 57,294
+
+
 #[tokio::main]
 async fn main() {     
     let v = vec![1, 2, 3];     
     println!("Hello, world!"); 
-    test_wallet().await
+    
+    let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
+    println!("a: {:?}",a);
+    //test_wallet().await
 }
 
 async fn test_wallet() {
 //        let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
-    let phrase = "super ordinary tip dirt claim rhythm example learn beauty thing region faint"; //a.into_phrase();
+    let sweeper_prvk = "";
+    let phrase = ""; //a.into_phrase();
     println!("=======================");
     println!("phrase: {:?}",&phrase);
     println!("=======================");
@@ -27,6 +38,8 @@ async fn test_wallet() {
     let hdw_tron = HDWallet::Tron(HDSeed::new(&phrase));
 
     let usdt = "0x6BABFBA7200f683c267ce892C94e1e110Df390c7";
+
+    let to = "";
 
     let mut wal_addrs_eth: Vec<WalletAddress> = vec![];
     let mut wal_addrs_token: Vec<WalletAddress> = vec![];
@@ -39,9 +52,7 @@ async fn test_wallet() {
         let eth_pub = hdw_eth.public(i as i32);
         let tron_pub = hdw_tron.public(i as i32);
         let eth_bal = hdw_eth.balance(i as i32).await;
-//        let eth_sweep = hdw_eth.sweep(i as i32).await;
         let eth_bal_token = hdw_eth.balance_token(i as i32,usdt).await;
-//        let eth_sweep_token = hdw_eth.sweep_token(i as i32,usdt).await;
         println!("=======================");
         println!("ETH");
         println!("addr: {:?}", eth_i);
@@ -55,16 +66,28 @@ async fn test_wallet() {
         println!("pub: {:?}", tron_pub);
         println!("=======================");
         if eth_bal.1 > U256::zero() {
-            wal_addrs_eth.push(WalletAddress { address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) })
+            wal_addrs_eth.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) })
         }
         if eth_bal_token.1 > U256::zero() {
-            wal_addrs_token.push(WalletAddress { address: eth_i, balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) })
+            wal_addrs_token.push(WalletAddress { id: i, address: eth_i, balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) })
         }
+
     }
 
     println!("--------------------");
     println!("Addrs: {:?}",wal_addrs_eth);
     println!("Addrs: {:?}",wal_addrs_token);
+    println!("--------------------");
+    let gas_for_main = wal_addrs_eth.len() * 21000;
+    let gas_for_tokens = wal_addrs_token.len() * 65000;
+    println!("gas for main: {:?}",gas_for_main);
+    println!("gas for tokens: {:?}",gas_for_tokens);
 
 
+}
+
+fn refill(sweeper_prvk : &str, main_addrs : Vec<WalletAddress>, token_addrs : Vec<WalletAddress>){
+    for m_a in main_addrs {
+        
+    }
 }
