@@ -1,6 +1,8 @@
+use std::{str::FromStr, thread};
+
 use bip39::Mnemonic;
-use web3::types::{U256, H160};
-use web3_hd::wallet::{HDWallet, HDSeed};
+use web3::types::{U256, H160, H256};
+use web3_hd::wallet::{HDWallet, HDSeed, gas_price, send_main, tx_receipt, tx_info};
 
 #[derive(Debug, Clone)]
 struct WalletAddress {
@@ -21,9 +23,9 @@ async fn main() {
     let v = vec![1, 2, 3];     
     println!("Hello, world!"); 
     
-    let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
-    println!("a: {:?}",a);
-    //test_wallet().await
+    //let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
+    //println!("a: {:?}",a);
+    test_wallet().await
 }
 
 async fn test_wallet() {
@@ -82,12 +84,30 @@ async fn test_wallet() {
     let gas_for_tokens = wal_addrs_token.len() * 65000;
     println!("gas for main: {:?}",gas_for_main);
     println!("gas for tokens: {:?}",gas_for_tokens);
-
+    refill(sweeper_prvk, wal_addrs_eth, wal_addrs_token).await;
+    //let hash = H256::from_str("0x077c8d6a71e6595353b0d51ed03d1d62a38b41566411915cd241f47696e0e283").unwrap();
+    //let receipt = tx_receipt(hash).await.unwrap();
 
 }
 
-fn refill(sweeper_prvk : &str, main_addrs : Vec<WalletAddress>, token_addrs : Vec<WalletAddress>){
+async fn refill(sweeper_prvk : &str, main_addrs : Vec<WalletAddress>, token_addrs : Vec<WalletAddress>){
     for m_a in main_addrs {
-        
+        let g_price = gas_price().await.unwrap();
+        let val = g_price * 21000;
+        let hash = send_main(sweeper_prvk, &m_a.address, val).await.unwrap();
+        let mut info= tx_info(hash).await.unwrap();
+        println!("--------------------");
+        println!("{:?}",info);
+        while info.transaction_index == None {
+            thread::sleep_ms(2000);
+            info = tx_info(hash).await.unwrap();
+        }
+        println!("---------confirmed-----------");
+        println!("{:?}",info)
+    }
+    for m_a in token_addrs {
+        let g_price = gas_price().await.unwrap();
+        let val = g_price * 2 * 65000;
+        send_main(sweeper_prvk, &m_a.address, val).await.unwrap();
     }
 }
