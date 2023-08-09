@@ -67,11 +67,18 @@ async fn test_wallet() {
         println!("priv: {:?}", tron_priv);
         println!("pub: {:?}", tron_pub);
         println!("=======================");
-        if eth_bal.1 > U256::zero() {
-            wal_addrs_eth.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) })
-        }
+        let g_price = gas_price().await.unwrap(); 
+        let tx_fee = g_price * 21000 * 5;
         if eth_bal_token.1 > U256::zero() {
-            wal_addrs_token.push(WalletAddress { id: i, address: eth_i, balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) })
+            wal_addrs_token.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
+        //let a_token = hdw_eth.sweep_token(i, usdt,to).await;
+        }
+        if eth_bal.1 > tx_fee {
+            wal_addrs_eth.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
+        println!("Found {:?} money. Tx fee {tx_fee} Sweeping...",eth_bal.1);
+        let a = hdw_eth.sweep(i, to).await;
+        } else {
+            println!("No funds on wallet: {:?} Skipping", eth_bal.1)
         }
 
     }
@@ -84,7 +91,8 @@ async fn test_wallet() {
     let gas_for_tokens = wal_addrs_token.len() * 65000;
     println!("gas for main: {:?}",gas_for_main);
     println!("gas for tokens: {:?}",gas_for_tokens);
-    refill(sweeper_prvk, wal_addrs_eth, wal_addrs_token).await;
+    //refill(sweeper_prvk, wal_addrs_eth, wal_addrs_token).await;
+
     //let hash = H256::from_str("0x077c8d6a71e6595353b0d51ed03d1d62a38b41566411915cd241f47696e0e283").unwrap();
     //let receipt = tx_receipt(hash).await.unwrap();
 
@@ -99,7 +107,8 @@ async fn refill(sweeper_prvk : &str, main_addrs : Vec<WalletAddress>, token_addr
         println!("--------------------");
         println!("{:?}",info);
         while info.transaction_index == None {
-            thread::sleep_ms(2000);
+            println!("waiting for confirmation...");
+            thread::sleep_ms(5000);
             info = tx_info(hash).await.unwrap();
         }
         println!("---------confirmed-----------");
@@ -108,6 +117,15 @@ async fn refill(sweeper_prvk : &str, main_addrs : Vec<WalletAddress>, token_addr
     for m_a in token_addrs {
         let g_price = gas_price().await.unwrap();
         let val = g_price * 2 * 65000;
-        send_main(sweeper_prvk, &m_a.address, val).await.unwrap();
+        let hash = send_main(sweeper_prvk, &m_a.address, val).await.unwrap();
+        let mut info= tx_info(hash).await.unwrap();
+        println!("--------------------");
+        println!("{:?}",info);
+        while info.transaction_index == None {
+            thread::sleep_ms(5000);
+            info = tx_info(hash).await.unwrap();
+        }
+        println!("---------confirmed-----------");
+        println!("{:?}",info)
     }
 }

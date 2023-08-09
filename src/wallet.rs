@@ -377,7 +377,7 @@ async fn eth_sweep_main(seed: &HDSeed, index: i32,to_str : &str) -> Result<Strin
     let gas_price = web3.eth().gas_price().await.unwrap();
     let bal = web3.eth().balance(addr, None).await.unwrap();
     let fee = gas_price*21000*5;
-    let val_to_send = bal;// - &fee;
+    let val_to_send = bal - &fee;
     let tx_call_req = CallRequest {
         to: Some(to),
         value: Some(bal),
@@ -395,9 +395,9 @@ async fn eth_sweep_main(seed: &HDSeed, index: i32,to_str : &str) -> Result<Strin
         value: val_to_send,
         ..Default::default()
     };
-    //let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
-    //let result = web3.eth().send_raw_transaction(signed.raw_transaction).await?;
-    //println!("Tx succeeded with hash: {}", result);
+    let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
+    let result = web3.eth().send_raw_transaction(signed.raw_transaction).await?;
+    println!("Tx succeeded with hash: {}", result);
     Ok("lalala".to_owned())
 }
 
