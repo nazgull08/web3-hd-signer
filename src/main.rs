@@ -1,6 +1,9 @@
-use std::{str::FromStr, thread};
+use std::{str::FromStr, thread, collections::HashMap};
+
 
 use bip39::Mnemonic;
+use config::Config;
+use serde_derive::Deserialize;
 use web3::types::{U256, H160, H256};
 use web3_hd::wallet::{HDWallet, HDSeed, gas_price, send_main, tx_receipt, tx_info};
 
@@ -12,6 +15,14 @@ struct WalletAddress {
     pub balance_token : (String, U256),
 }
 
+#[derive(Debug, Deserialize)]
+pub struct Settings {
+    pub sweeper : String, 
+    pub hd_phrase : String, 
+    pub token : String,
+    pub safe : String
+}
+
 //NTD
 // ETH gas usage 94,795 | 63,197 
 // BSC gas usage 76,654 | 51,103 
@@ -20,18 +31,20 @@ struct WalletAddress {
 
 #[tokio::main]
 async fn main() {     
-    let v = vec![1, 2, 3];     
-    println!("Hello, world!"); 
-    
-    //let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
-    //println!("a: {:?}",a);
-    test_wallet().await
+    let conf = Config::builder()
+        .add_source(config::File::with_name("config.toml"))
+        .build()
+        .unwrap()
+        .try_deserialize::<Settings>()
+        .unwrap();
+    println!("{:?}",conf);
+    //test_wallet().await
 }
 
-async fn test_wallet() {
+async fn test_wallet(conf : Settings) {
 //        let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
-    let sweeper_prvk = "";
-    let phrase = ""; //a.into_phrase();
+    let sweeper_prvk = conf.sweeper;
+    let phrase = conf.hd_phrase;
     println!("=======================");
     println!("phrase: {:?}",&phrase);
     println!("=======================");
@@ -39,9 +52,9 @@ async fn test_wallet() {
     let hdw_eth = HDWallet::Ethereum(HDSeed::new(&phrase));
     let hdw_tron = HDWallet::Tron(HDSeed::new(&phrase));
 
-    let usdt = "0x6BABFBA7200f683c267ce892C94e1e110Df390c7";
+    let usdt = &conf.token;
 
-    let to = "";
+    let to = conf.safe;
 
     let mut wal_addrs_eth: Vec<WalletAddress> = vec![];
     let mut wal_addrs_token: Vec<WalletAddress> = vec![];
@@ -76,7 +89,7 @@ async fn test_wallet() {
         if eth_bal.1 > tx_fee {
             wal_addrs_eth.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
         println!("Found {:?} money. Tx fee {tx_fee} Sweeping...",eth_bal.1);
-        let a = hdw_eth.sweep(i, to).await;
+        //let a = hdw_eth.sweep(i, to).await;
         } else {
             println!("No funds on wallet: {:?} Skipping", eth_bal.1)
         }
@@ -91,10 +104,6 @@ async fn test_wallet() {
     let gas_for_tokens = wal_addrs_token.len() * 65000;
     println!("gas for main: {:?}",gas_for_main);
     println!("gas for tokens: {:?}",gas_for_tokens);
-    //refill(sweeper_prvk, wal_addrs_eth, wal_addrs_token).await;
-
-    //let hash = H256::from_str("0x077c8d6a71e6595353b0d51ed03d1d62a38b41566411915cd241f47696e0e283").unwrap();
-    //let receipt = tx_receipt(hash).await.unwrap();
 
 }
 
