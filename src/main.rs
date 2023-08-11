@@ -4,6 +4,8 @@ use bip39::Mnemonic;
 use web3::types::{U256, H160, H256};
 use web3_hd::wallet::{HDWallet, HDSeed, gas_price, send_main, tx_receipt, tx_info};
 
+use clap::Parser;
+
 #[derive(Debug, Clone)]
 struct WalletAddress {
     pub id : i32,
@@ -17,9 +19,15 @@ struct WalletAddress {
 // BSC gas usage 76,654 | 51,103 
 // PLG gas usage 96,955 | 57,294
 
+#[derive(Parser)]
+struct Cli {     
+    pattern: String,
+    path: std::path::PathBuf
+}
 
 #[tokio::main]
 async fn main() {     
+    let args = Cli::parse();
     let v = vec![1, 2, 3];     
     println!("Hello, world!"); 
     
