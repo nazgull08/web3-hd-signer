@@ -1,3 +1,4 @@
+#![feature(let_chains)]
 use std::{str::FromStr, thread, collections::HashMap};
 
 
@@ -7,11 +8,11 @@ use serde_derive::Deserialize;
 use web3::types::{U256, H160, H256};
 use web3_hd::wallet::{HDWallet, HDSeed, gas_price, send_main, tx_receipt, tx_info};
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 #[derive(Debug, Clone)]
 struct WalletAddress {
-    pub id : i32,
+    pub id : u32,
     pub address : String,
     pub balance : U256,
     pub balance_token : (String, U256),
@@ -25,34 +26,56 @@ pub struct Settings {
     pub safe : String
 }
 
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Balance {c_from: Option<u32>, c_to: Option<u32>},
+    Refill,
+    Sweep
+}
+
 //NTD
 // ETH gas usage 94,795 | 63,197 
 // BSC gas usage 76,654 | 51,103 
 // PLG gas usage 96,955 | 57,294
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
 struct Cli {     
-    pattern: String,
-    path: std::path::PathBuf
+    #[arg(default_value = "./config.toml")]
+    config_path: String,
+    #[command(subcommand)]
+    command: Commands
 }
 
 #[tokio::main]
 async fn main() {     
     let args = Cli::parse();
-    let v = vec![1, 2, 3];     
-    println!("Hello, world!"); 
     
-    //let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
-    //println!("a: {:?}",a);
     let conf = Config::builder()
         .add_source(config::File::with_name("config.toml"))
         .build()
         .unwrap()
         .try_deserialize::<Settings>()
         .unwrap();
-    println!("{:?}",conf);
-    //test_wallet().await
+    match args.command {
+        Commands::Balance{c_from: o_c_from, c_to: o_c_to} => {
+            if let Some(c_from) = o_c_from && let Some(c_to) = o_c_to{
+                println!("If In balance!!!");
+                balance(conf,c_from,c_to).await
+            } else {
+                println!("Else In balance!!!");
+                balance(conf,0,10).await
+            }
+        },
+        Commands::Refill => {
+            println!("Implement refill...");
+        },
+        Commands::Sweep => {
+            println!("Implement sweep...");
+        }
+    }
 }
+
 
 async fn test_wallet(conf : Settings) {
 //        let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
@@ -149,5 +172,48 @@ async fn refill(sweeper_prvk : &str, main_addrs : Vec<WalletAddress>, token_addr
         }
         println!("---------confirmed-----------");
         println!("{:?}",info)
+    }
+}
+
+
+async fn balance(conf: Settings, c_from: u32, c_to: u32) {
+    println!("in balance");
+    let sweeper_prvk = conf.sweeper;
+    let phrase = conf.hd_phrase;
+    let hdw_eth = HDWallet::Ethereum(HDSeed::new(&phrase));
+    let usdt = &conf.token;
+    let to = conf.safe;
+    let mut wal_addrs_eth: Vec<WalletAddress> = vec![];
+    let mut wal_addrs_token: Vec<WalletAddress> = vec![];
+
+    for i in c_from..c_to {
+        println!("i: = {:?}", i);
+        let eth_i = hdw_eth.address(i as i32);
+        let eth_priv = hdw_eth.private(i as i32);
+        let eth_pub = hdw_eth.public(i as i32);
+        let eth_bal = hdw_eth.balance(i as i32).await;
+        let eth_bal_token = hdw_eth.balance_token(i as i32,usdt).await;
+        println!("=======================");
+        println!("ETH");
+        println!("addr: {:?}", eth_i);
+        println!("priv: {:?}", eth_priv);
+        println!("pub: {:?}", eth_pub);
+        println!("bal: {:?}", eth_bal.1);
+        println!("bal_token: {:?}", eth_bal_token.1);
+        println!("=======================");
+        let g_price = gas_price().await.unwrap(); 
+        let tx_fee = g_price * 21000 * 5;
+        if eth_bal_token.1 > U256::zero() {
+            wal_addrs_token.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
+        //let a_token = hdw_eth.sweep_token(i, usdt,to).await;
+        }
+        if eth_bal.1 > tx_fee {
+            wal_addrs_eth.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
+        println!("Found {:?} money. Tx fee {tx_fee}",eth_bal.1);
+        //let a = hdw_eth.sweep(i, to).await;
+        } else {
+            println!("No funds on wallet: {:?} Skipping", eth_bal.1)
+        }
+
     }
 }
