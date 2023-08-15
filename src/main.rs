@@ -178,6 +178,8 @@ async fn refill(sweeper_prvk : &str, main_addrs : Vec<WalletAddress>, token_addr
 
 async fn balance(conf: Settings, c_from: u32, c_to: u32) {
     println!("in balance");
+    let rates = rates().await;
+    println!("in balance2");
     let sweeper_prvk = conf.sweeper;
     let phrase = conf.hd_phrase;
     let hdw_eth = HDWallet::Ethereum(HDSeed::new(&phrase));
@@ -199,6 +201,11 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32) {
         println!("priv: {:?}", eth_priv);
         println!("pub: {:?}", eth_pub);
         println!("bal: {:?}", eth_bal.1);
+        let eth_bal_f = eth_bal.1.as_u128() as f64 ;
+        let eth_bal_f_prep = eth_bal_f / 1_000_000_000_000_000_000.0;
+        let eth_bal_in_usd = eth_bal_f_prep / rates.ETH;
+        println!("bal_f: {:.15}", eth_bal_f_prep);
+        println!("bal_in_usd: {:.15}", eth_bal_in_usd);
         println!("bal_token: {:?}", eth_bal_token.1);
         println!("=======================");
         let g_price = gas_price().await.unwrap(); 
@@ -216,4 +223,24 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32) {
         }
 
     }
+}
+#[allow(non_snake_case)]
+#[derive(Debug,Deserialize)]
+pub struct Rates{
+    pub ETH: f64,
+    pub TRX: f64,
+    pub PLG: f64,
+    pub BNB: f64,
+    pub XLM: f64,
+}
+
+async fn rates() -> Rates {
+    println!("getting current rates...");
+    let rs:Rates = reqwest::get("https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=ETH,TRX,PLG,BNB,XLM")
+        .await
+        .unwrap()
+        .json::<Rates>()
+        .await
+        .unwrap();
+    rs
 }
