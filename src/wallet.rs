@@ -81,35 +81,35 @@ impl HDWallet {
         }
     }
 
-    pub async fn balance(&self, index: i32) -> (String, web3::types::U256) {
+    pub async fn balance(&self, index: i32, provider: &str) -> (String, web3::types::U256) {
         match self {
-            HDWallet::Ethereum(seed) => eth_balance(seed, index).await.unwrap(),
-            HDWallet::Tron(seed) => eth_balance(seed, index).await.unwrap(), //NTD total rework 
-            HDWallet::Stellar(seed) => eth_balance(seed, index).await.unwrap(),
+            HDWallet::Ethereum(seed) => eth_balance(seed, index, provider).await.unwrap(),
+            HDWallet::Tron(seed) => eth_balance(seed, index, provider).await.unwrap(), //NTD total rework 
+            HDWallet::Stellar(seed) => eth_balance(seed, index, provider).await.unwrap(),
         }
     }
 
-    pub async fn balance_token(&self, index: i32, addr: &str) -> (String, web3::types::U256) {
+    pub async fn balance_token(&self, index: i32, addr: &str, provider: &str) -> (String, web3::types::U256) {
         match self {
-            HDWallet::Ethereum(seed) => eth_balance_token(seed, index, addr).await.unwrap(),
-            HDWallet::Tron(seed) => eth_balance_token(seed, index, addr).await.unwrap(), //NTD total rework 
-            HDWallet::Stellar(seed) => eth_balance_token(seed, index, addr).await.unwrap(),
+            HDWallet::Ethereum(seed) => eth_balance_token(seed, index, addr, provider).await.unwrap(),
+            HDWallet::Tron(seed) => eth_balance_token(seed, index, addr, provider).await.unwrap(), //NTD total rework 
+            HDWallet::Stellar(seed) => eth_balance_token(seed, index, addr, provider).await.unwrap(),
         }
     }
 
-    pub async fn sweep(&self, index: i32, to: &str) -> (String) {
+    pub async fn sweep(&self, index: i32, to: &str, provider: &str) -> (String) {
         match self {
-            HDWallet::Ethereum(seed) => eth_sweep_main(seed, index,to).await.unwrap(),
-            HDWallet::Tron(seed) => eth_sweep_main(seed, index,to).await.unwrap(), //NTD total rework 
-            HDWallet::Stellar(seed) => eth_sweep_main(seed, index,to).await.unwrap(),
+            HDWallet::Ethereum(seed) => eth_sweep_main(seed, index,to, provider).await.unwrap(),
+            HDWallet::Tron(seed) => eth_sweep_main(seed, index,to, provider).await.unwrap(), //NTD total rework 
+            HDWallet::Stellar(seed) => eth_sweep_main(seed, index,to, provider).await.unwrap(),
         }
     }
 
-    pub async fn sweep_token(&self, index: i32, addr: &str,to: &str) -> (String) {
+    pub async fn sweep_token(&self, index: i32, addr: &str,to: &str, provider: &str) -> (String) {
         match self {
-            HDWallet::Ethereum(seed) => eth_sweep_token(seed, index, addr,to).await.unwrap(),
-            HDWallet::Tron(seed) => eth_sweep_token(seed, index, addr,to).await.unwrap(), //NTD total rework 
-            HDWallet::Stellar(seed) => eth_sweep_token(seed, index, addr,to).await.unwrap(),
+            HDWallet::Ethereum(seed) => eth_sweep_token(seed, index, addr,to, provider).await.unwrap(),
+            HDWallet::Tron(seed) => eth_sweep_token(seed, index, addr,to, provider).await.unwrap(), 
+            HDWallet::Stellar(seed) => eth_sweep_token(seed, index, addr,to, provider).await.unwrap(),
         }
     }
 }
@@ -357,8 +357,8 @@ fn stellar_sign(seed: &HDSeed, index: i32) -> String {
     "lalala".to_owned()
 }
 
-async fn eth_balance(seed: &HDSeed, index: i32) -> Result<(String,web3::types::U256),web3::Error> {
-    let transport = web3::transports::Http::new("https://goerli.infura.io/v3/62993b0fe3b2443794aae04c323b478d")?;
+async fn eth_balance(seed: &HDSeed, index: i32, provider: &str) -> Result<(String,web3::types::U256),web3::Error> {
+    let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);
     let addr = H160::from_str(&addr_str).unwrap();
@@ -366,8 +366,8 @@ async fn eth_balance(seed: &HDSeed, index: i32) -> Result<(String,web3::types::U
     Ok((addr_str, bal))
 }
 
-async fn eth_sweep_main(seed: &HDSeed, index: i32,to_str : &str) -> Result<String,web3::Error> {
-    let transport = web3::transports::Http::new("https://goerli.infura.io/v3/62993b0fe3b2443794aae04c323b478d")?;
+async fn eth_sweep_main(seed: &HDSeed, index: i32,to_str : &str, provider: &str) -> Result<String,web3::Error> {
+    let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);
     let prvk_str = eth_private_by_index(seed, index);
@@ -401,8 +401,8 @@ async fn eth_sweep_main(seed: &HDSeed, index: i32,to_str : &str) -> Result<Strin
     Ok("lalala".to_owned())
 }
 
-async fn eth_balance_token(seed: &HDSeed, index: i32, token_addr: &str) -> Result<(String,web3::types::U256),web3::Error> {
-    let transport = web3::transports::Http::new("https://goerli.infura.io/v3/62993b0fe3b2443794aae04c323b478d")?;
+async fn eth_balance_token(seed: &HDSeed, index: i32, token_addr: &str, provider: &str) -> Result<(String,web3::types::U256),web3::Error> {
+    let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);
     let addr = H160::from_str(&addr_str).unwrap();
@@ -415,8 +415,8 @@ async fn eth_balance_token(seed: &HDSeed, index: i32, token_addr: &str) -> Resul
 }
 
 
-async fn eth_sweep_token(seed: &HDSeed, index: i32, token_addr: &str, to_str : &str) -> Result<String,web3::Error> {
-    let transport = web3::transports::Http::new("https://goerli.infura.io/v3/62993b0fe3b2443794aae04c323b478d")?;
+async fn eth_sweep_token(seed: &HDSeed, index: i32, token_addr: &str, to_str : &str, provider: &str) -> Result<String,web3::Error> {
+    let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);
     let prvk_str = eth_private_by_index(seed, index);
@@ -454,29 +454,29 @@ fn stellar_balance(seed: &HDSeed, index: i32) -> (String,web3::types::U256) {
     ("".to_owned(),web3::types::U256::zero())
 }
 
-pub async fn gas_price() -> Result<U256,web3::Error> {
-    let transport = web3::transports::Http::new("https://goerli.infura.io/v3/62993b0fe3b2443794aae04c323b478d")?;
+pub async fn gas_price(provider: &str) -> Result<U256,web3::Error> {
+    let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let gas_price = web3.eth().gas_price().await.unwrap();
     Ok(gas_price)
 }
 
-pub async fn tx_receipt(hash: H256) -> Result<TransactionReceipt, web3::Error> {
-    let transport = web3::transports::Http::new("https://goerli.infura.io/v3/62993b0fe3b2443794aae04c323b478d")?;
+pub async fn tx_receipt(hash: H256, provider: &str) -> Result<TransactionReceipt, web3::Error> {
+    let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let receipt= web3.eth().transaction_receipt(hash).await.unwrap().unwrap();
     Ok(receipt)
 }
 
-pub async fn tx_info(hash: H256) -> Result<Transaction, web3::Error> {
-    let transport = web3::transports::Http::new("https://goerli.infura.io/v3/62993b0fe3b2443794aae04c323b478d")?;
+pub async fn tx_info(hash: H256, provider: &str) -> Result<Transaction, web3::Error> {
+    let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let tx= web3.eth().transaction(web3::types::TransactionId::Hash(hash)).await.unwrap().unwrap();
     Ok(tx)
 }
 
-pub async fn send_main(prvk_str: &str, to_str: &str, val: U256) -> Result<H256,web3::Error> {
-    let transport = web3::transports::Http::new("https://goerli.infura.io/v3/62993b0fe3b2443794aae04c323b478d")?;
+pub async fn send_main(prvk_str: &str, to_str: &str, val: U256, provider: &str) -> Result<H256,web3::Error> {
+    let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let prvk = web3::signing::SecretKey::from_str(&prvk_str).unwrap();
     let to = Address::from_str(&to_str).unwrap();
