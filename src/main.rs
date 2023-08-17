@@ -93,6 +93,7 @@ async fn test_wallet(conf : Settings) {
 
     let mut wal_addrs_eth: Vec<WalletAddress> = vec![];
     let mut wal_addrs_token: Vec<WalletAddress> = vec![];
+    let provider = &conf.eth_provider;
 
     for i in 0..5 {
         let eth_i = hdw_eth.address(i as i32);
@@ -101,8 +102,8 @@ async fn test_wallet(conf : Settings) {
         let tron_priv = hdw_tron.private(i as i32);
         let eth_pub = hdw_eth.public(i as i32);
         let tron_pub = hdw_tron.public(i as i32);
-        let eth_bal = hdw_eth.balance(i as i32, &conf.eth_provider).await;
-        let eth_bal_token = hdw_eth.balance_token(i as i32,usdt, &conf.eth_provider).await;
+        let eth_bal = hdw_eth.balance(i as i32, provider).await;
+        let eth_bal_token = hdw_eth.balance_token(i as i32,usdt, provider).await;
         println!("=======================");
         println!("ETH");
         println!("addr: {:?}", eth_i);
@@ -115,7 +116,7 @@ async fn test_wallet(conf : Settings) {
         println!("priv: {:?}", tron_priv);
         println!("pub: {:?}", tron_pub);
         println!("=======================");
-        let g_price = gas_price(&conf.eth_provider).await.unwrap(); 
+        let g_price = gas_price(provider).await.unwrap(); 
         let tx_fee = g_price * 21000 * 5;
         if eth_bal_token.1 > U256::zero() {
             wal_addrs_token.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
@@ -141,31 +142,32 @@ async fn test_wallet(conf : Settings) {
 }
 
 async fn refill(sweeper_prvk : &str, main_addrs : Vec<WalletAddress>, token_addrs : Vec<WalletAddress>, conf: Settings){
+    let provider = &conf.eth_provider;
     for m_a in main_addrs {
-        let g_price = gas_price(&conf.eth_provider).await.unwrap();
+        let g_price = gas_price(provider).await.unwrap();
         let val = g_price * 21000;
-        let hash = send_main(sweeper_prvk, &m_a.address, val, &conf.eth_provider).await.unwrap();
-        let mut info= tx_info(hash, &conf.eth_provider).await.unwrap();
+        let hash = send_main(sweeper_prvk, &m_a.address, val, provider).await.unwrap();
+        let mut info= tx_info(hash, provider).await.unwrap();
         println!("--------------------");
         println!("{:?}",info);
         while info.transaction_index == None {
             println!("waiting for confirmation...");
             thread::sleep_ms(5000);
-            info = tx_info(hash, &conf.eth_provider).await.unwrap();
+            info = tx_info(hash, provider).await.unwrap();
         }
         println!("---------confirmed-----------");
         println!("{:?}",info)
     }
     for m_a in token_addrs {
-        let g_price = gas_price(&conf.eth_provider).await.unwrap();
+        let g_price = gas_price(provider).await.unwrap();
         let val = g_price * 2 * 65000;
-        let hash = send_main(sweeper_prvk, &m_a.address, val, &conf.eth_provider).await.unwrap();
-        let mut info= tx_info(hash, &conf.eth_provider).await.unwrap();
+        let hash = send_main(sweeper_prvk, &m_a.address, val, provider).await.unwrap();
+        let mut info= tx_info(hash, provider).await.unwrap();
         println!("--------------------");
         println!("{:?}",info);
         while info.transaction_index == None {
             thread::sleep_ms(5000);
-            info = tx_info(hash, &conf.eth_provider).await.unwrap();
+            info = tx_info(hash, provider).await.unwrap();
         }
         println!("---------confirmed-----------");
         println!("{:?}",info)
@@ -183,6 +185,7 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32) {
     let to = conf.eth_safe;
     let mut wal_addrs_eth: Vec<WalletAddress> = vec![];
     let mut wal_addrs_token: Vec<WalletAddress> = vec![];
+    let provider = &conf.eth_provider;
 
     for i in c_from..c_to {
         println!("---------");
@@ -190,12 +193,12 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32) {
         println!("i: = {:?}, addr: {eth_i}", i);
         let eth_priv = hdw_eth.private(i as i32);
         let eth_pub = hdw_eth.public(i as i32);
-        let eth_bal = hdw_eth.balance(i as i32, &conf.eth_provider).await;
-        let eth_bal_token = hdw_eth.balance_token(i as i32,usdt, &conf.eth_provider).await;
+        let eth_bal = hdw_eth.balance(i as i32, provider).await;
+        let eth_bal_token = hdw_eth.balance_token(i as i32,usdt, provider).await;
         let eth_bal_f = eth_bal.1.as_u128() as f64 ;
         let eth_bal_f_prep = eth_bal_f / 1_000_000_000_000_000_000.0;
         let eth_bal_in_usd = eth_bal_f_prep * rates.eth;
-        let g_price = gas_price(&conf.eth_provider).await.unwrap(); 
+        let g_price = gas_price(provider).await.unwrap(); 
         let tx_fee: U256 = g_price * 21000 * 5;
         let tx_fee_prep = tx_fee.as_u128() as f64 / 1_000_000_000_000_000_000.0;
         if eth_bal_token.1 > U256::zero() {
