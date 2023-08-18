@@ -8,7 +8,7 @@ use serde_derive::Deserialize;
 use web3::types::{U256, H160, H256};
 use web3_hd::wallet::{HDWallet, HDSeed, gas_price, send_main, tx_receipt, tx_info};
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Debug, Clone)]
 struct WalletAddress {
@@ -38,6 +38,17 @@ enum Commands {
 // ETH gas usage 94,795 | 63,197 
 // BSC gas usage 76,654 | 51,103 
 // MTC gas usage 96,955 | 57,294
+
+#[derive(ValueEnum,Debug,Clone)]
+pub enum Crypto {
+    Eth,
+    Tron,
+    Polygon,
+    BSC,
+    Stellar,
+    All
+}
+
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
