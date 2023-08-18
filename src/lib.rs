@@ -1,4 +1,5 @@
 pub mod wallet;
+pub mod types;
 
 #[cfg(test)]
 mod tests {

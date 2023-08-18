@@ -17,7 +17,7 @@ use web3::Web3;
 use web3::contract::{Contract, Options};
 use web3::types::{H160, Address, TransactionParameters, CallRequest, U256, TransactionReceipt, H256, Transaction};
 
-use log::*;
+use crate::types::*;
 
 #[derive(Debug, Clone)]
 pub enum HDWallet {
@@ -84,16 +84,16 @@ impl HDWallet {
     pub async fn balance(&self, index: i32, provider: &str) -> (String, web3::types::U256) {
         match self {
             HDWallet::Ethereum(seed) => eth_balance(seed, index, provider).await.unwrap(),
-            HDWallet::Tron(seed) => eth_balance(seed, index, provider).await.unwrap(), //NTD total rework 
+            HDWallet::Tron(seed) => tron_balance(seed, index, provider).await.unwrap(), //NTD total rework 
             HDWallet::Stellar(seed) => eth_balance(seed, index, provider).await.unwrap(),
         }
     }
 
     pub async fn balance_token(&self, index: i32, addr: &str, provider: &str) -> (String, web3::types::U256) {
         match self {
-            HDWallet::Ethereum(seed) => eth_balance_token(seed, index, addr, provider).await.unwrap(),
-            HDWallet::Tron(seed) => eth_balance_token(seed, index, addr, provider).await.unwrap(), //NTD total rework 
-            HDWallet::Stellar(seed) => eth_balance_token(seed, index, addr, provider).await.unwrap(),
+            HDWallet::Ethereum(seed) => eth_balance_token(seed, index, addr, provider,Crypto::Eth).await.unwrap(),
+            HDWallet::Tron(seed) => eth_balance_token(seed, index, addr, provider,Crypto::Tron).await.unwrap(), //NTD total rework 
+            HDWallet::Stellar(seed) => eth_balance_token(seed, index, addr, provider,Crypto::Stellar).await.unwrap(),
         }
     }
 
@@ -107,9 +107,9 @@ impl HDWallet {
 
     pub async fn sweep_token(&self, index: i32, addr: &str,to: &str, provider: &str) -> (String) {
         match self {
-            HDWallet::Ethereum(seed) => eth_sweep_token(seed, index, addr,to, provider).await.unwrap(),
-            HDWallet::Tron(seed) => eth_sweep_token(seed, index, addr,to, provider).await.unwrap(), 
-            HDWallet::Stellar(seed) => eth_sweep_token(seed, index, addr,to, provider).await.unwrap(),
+            HDWallet::Ethereum(seed) => eth_sweep_token(seed, index, addr,to, provider, Crypto::Eth).await.unwrap(),
+            HDWallet::Tron(seed) => eth_sweep_token(seed, index, addr,to, provider, Crypto::Tron).await.unwrap(), 
+            HDWallet::Stellar(seed) => eth_sweep_token(seed, index, addr,to, provider, Crypto::Stellar).await.unwrap(),
         }
     }
 }
@@ -167,6 +167,16 @@ fn tron_address_by_index(seed: &HDSeed, index: i32) -> String {
         &DerivationPath::from_str(&hd_path_str).unwrap(),
     );
     extended_pubk_to_addr_tron(&pubk)
+}
+
+fn tron_address_by_index_hex(seed: &HDSeed, index: i32) -> String {
+    let hd_path_str = format!("m/44'/195'/0'/0/{index}");
+    let seed_m = Seed::new(&seed.mnemonic, "");
+    let (_pk, pubk) = get_extended_keypair(
+        seed_m.as_bytes(),
+        &DerivationPath::from_str(&hd_path_str).unwrap(),
+    );
+    extended_pubk_to_addr_tron_hex(&pubk)
 }
 
 fn stellar_address_by_index(seed: &HDSeed, index: i32) -> String {
@@ -286,6 +296,28 @@ fn extended_pubk_to_addr_tron(pubk: &ExtendedPubKey) -> String {
     base58::encode(&final_addr_bytes)
 }
 
+fn extended_pubk_to_addr_tron_hex(pubk: &ExtendedPubKey) -> String {
+    //massage into the right format
+    let pubk_str = pubk.public_key.to_string();
+    let pubk_secp = secp256k1::PublicKey::from_str(&pubk_str).unwrap();
+    //format as uncompressed key, remove "04" in the beginning
+    let pubk_uncomp = &PublicKey::new_uncompressed(pubk_secp).to_string()[2..];
+    //decode from hex and pass to keccak for hashing
+    let pubk_bytes = hex::decode(pubk_uncomp).unwrap();
+    let k_addr = &keccak_hash(&pubk_bytes);
+    //keep last 20 bytes of the result
+    let experimental_addr = "41".to_owned() + &k_addr[24..];
+    let hex_exp_addr = hex::decode(&experimental_addr).unwrap();
+    let s_hex_exp_addr = hex_exp_addr.as_slice();
+    let val0 = digest(s_hex_exp_addr);
+    let hex_val0 = hex::decode(val0).unwrap();
+    let s_hex_val0 = hex_val0.as_slice();
+    let val1 = digest(s_hex_val0);
+    let check_sum_val1 = &val1[0..8];
+    let final_addr = experimental_addr + check_sum_val1;
+    final_addr
+}
+
 fn extended_pubk_to_addr_stellar(pubk: &ExtendedPubKey) -> String {
     //massage into the right format
     let pubk_str = pubk.public_key.to_string();
@@ -366,6 +398,19 @@ async fn eth_balance(seed: &HDSeed, index: i32, provider: &str) -> Result<(Strin
     Ok((addr_str, bal))
 }
 
+async fn tron_balance(seed: &HDSeed, index: i32, provider: &str) -> Result<(String,web3::types::U256),web3::Error> {
+    let transport = web3::transports::Http::new(provider)?;
+    let web3 = web3::Web3::new(transport);
+    let addr_str_0 = "0x".to_owned() + &tron_address_by_index_hex(seed, index);
+    let addr_str_1 = tron_address_by_index(seed, index);
+    println!("{:?}",addr_str_0);
+    println!("{:?}",addr_str_1);
+    let addr_str = "0x279f93bC1FEB8AF89D3253C5471b823c26671A92".to_owned();
+    let addr = H160::from_str(&addr_str).unwrap();
+    let bal = web3.eth().balance(addr, None).await.unwrap();
+    Ok((addr_str, bal))
+}
+
 async fn eth_sweep_main(seed: &HDSeed, index: i32,to_str : &str, provider: &str) -> Result<String,web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
@@ -401,21 +446,25 @@ async fn eth_sweep_main(seed: &HDSeed, index: i32,to_str : &str, provider: &str)
     Ok("lalala".to_owned())
 }
 
-async fn eth_balance_token(seed: &HDSeed, index: i32, token_addr: &str, provider: &str) -> Result<(String,web3::types::U256),web3::Error> {
+async fn eth_balance_token(seed: &HDSeed, index: i32, token_addr: &str, provider: &str,crypto: Crypto) -> Result<(String,web3::types::U256),web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);
     let addr = H160::from_str(&addr_str).unwrap();
     let token_address = H160::from_str(&token_addr).unwrap();
     let bal = web3.eth().balance(addr, None).await.unwrap();
-    let contract = Contract::from_json(web3.eth(), token_address, include_bytes!("../res/erc20.abi.json")).unwrap();
-    let result = contract.query("balanceOf", (addr,), None, Options::default(), None);     
-    let balance_of: U256 = result.await.unwrap(); 
+    let contract = match crypto {
+        Crypto::Tron => {Contract::from_json(web3.eth(), token_address, include_bytes!("../res/trc20.abi.json")).unwrap()},
+        _ => {Contract::from_json(web3.eth(), token_address, include_bytes!("../res/erc20.abi.json")).unwrap()}, 
+    }; 
+    //let result = contract.query("balanceOf", (addr,), None, Options::default(), None);     
+    //let balance_of: U256 = result.await.unwrap(); 
+    let balance_of = U256::zero();
     Ok((addr_str, balance_of))
 }
 
 
-async fn eth_sweep_token(seed: &HDSeed, index: i32, token_addr: &str, to_str : &str, provider: &str) -> Result<String,web3::Error> {
+async fn eth_sweep_token(seed: &HDSeed, index: i32, token_addr: &str, to_str : &str, provider: &str, crypto: Crypto) -> Result<String,web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);

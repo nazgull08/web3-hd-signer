@@ -12,6 +12,10 @@ keywords = ["web3","wallet","hd"]
 name = "web3_hd"
 path = "src/lib.rs"
 
+[[bin]]
+name = "web3_hd"
+path = "src/main.rs"
+
 [dependencies]
 bitcoin = "0.30.0"
 clap = { version = "^4.0", features = ["derive"] }

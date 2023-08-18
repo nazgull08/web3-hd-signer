@@ -1,4 +1,6 @@
 #![feature(let_chains)]
+
+
 use std::{str::FromStr, thread, collections::HashMap};
 
 
@@ -10,51 +12,21 @@ use web3_hd::wallet::{HDWallet, HDSeed, gas_price, send_main, tx_receipt, tx_inf
 
 use clap::{Parser, Subcommand, ValueEnum};
 
-#[derive(Debug, Clone)]
-struct WalletAddress {
-    pub id : u32,
-    pub address : String,
-    pub balance : U256,
-    pub balance_token : (String, U256),
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Settings {
-    pub sweeper : String, 
-    pub hd_phrase : String, 
-    pub eth_token : String,
-    pub eth_safe : String,
-    pub eth_provider : String
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    Balance {c_from: Option<u32>, c_to: Option<u32>},
-    Refill,
-    Sweep
-}
+use web3_hd::types::*;
 
 //NTD
 // ETH gas usage 94,795 | 63,197 
 // BSC gas usage 76,654 | 51,103 
 // MTC gas usage 96,955 | 57,294
 
-#[derive(ValueEnum,Debug,Clone)]
-pub enum Crypto {
-    Eth,
-    Tron,
-    Polygon,
-    BSC,
-    Stellar,
-    All
-}
-
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {     
+    #[arg(short,long)]
+    crypto: Crypto,
     #[arg(default_value = "./config.toml")]
-    config_path: String,
+    path: String,
     #[command(subcommand)]
     command: Commands
 }
@@ -69,13 +41,14 @@ async fn main() {
         .unwrap()
         .try_deserialize::<Settings>()
         .unwrap();
+    let crypto = args.crypto;
     match args.command {
         Commands::Balance{c_from: o_c_from, c_to: o_c_to} => {
-            if let Some(c_from) = o_c_from && let Some(c_to) = o_c_to{
-                balance(conf,c_from,c_to).await
-            } else {
-                balance(conf,0,10).await
-            }
+            let (c_from,c_to) = match (o_c_to,o_c_from) {
+                (Some(cfrom),Some(cto)) => (cfrom,cto),
+                _ => (0,10)
+            };
+            balance(conf,c_from,c_to,crypto).await;
         },
         Commands::Refill => {
             println!("Implement refill...");
@@ -84,72 +57,6 @@ async fn main() {
             println!("Implement sweep...");
         }
     }
-}
-
-
-async fn test_wallet(conf : Settings) {
-//        let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
-    let sweeper_prvk = conf.sweeper;
-    let phrase = conf.hd_phrase;
-    println!("=======================");
-    println!("phrase: {:?}",&phrase);
-    println!("=======================");
-
-    let hdw_eth = HDWallet::Ethereum(HDSeed::new(&phrase));
-    let hdw_tron = HDWallet::Tron(HDSeed::new(&phrase));
-
-    let usdt = &conf.eth_token;
-
-    let to = conf.eth_safe;
-
-    let mut wal_addrs_eth: Vec<WalletAddress> = vec![];
-    let mut wal_addrs_token: Vec<WalletAddress> = vec![];
-    let provider = &conf.eth_provider;
-
-    for i in 0..5 {
-        let eth_i = hdw_eth.address(i as i32);
-        let tron_i = hdw_tron.address(i as i32);
-        let eth_priv = hdw_eth.private(i as i32);
-        let tron_priv = hdw_tron.private(i as i32);
-        let eth_pub = hdw_eth.public(i as i32);
-        let tron_pub = hdw_tron.public(i as i32);
-        let eth_bal = hdw_eth.balance(i as i32, provider).await;
-        let eth_bal_token = hdw_eth.balance_token(i as i32,usdt, provider).await;
-        println!("=======================");
-        println!("ETH");
-        println!("addr: {:?}", eth_i);
-        println!("priv: {:?}", eth_priv);
-        println!("pub: {:?}", eth_pub);
-        println!("bal: {:?}", eth_bal.1);
-        println!("bal_token: {:?}", eth_bal_token.1);
-        println!("TRON");
-        println!("addr: {:?}", tron_i);
-        println!("priv: {:?}", tron_priv);
-        println!("pub: {:?}", tron_pub);
-        println!("=======================");
-        let g_price = gas_price(provider).await.unwrap(); 
-        let tx_fee = g_price * 21000 * 5;
-        if eth_bal_token.1 > U256::zero() {
-            wal_addrs_token.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
-        }
-        if eth_bal.1 > tx_fee {
-            wal_addrs_eth.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
-        println!("Found {:?} money. Tx fee {tx_fee} Sweeping...",eth_bal.1);
-        } else {
-            println!("No funds on wallet: {:?} Skipping", eth_bal.1)
-        }
-
-    }
-
-    println!("--------------------");
-    println!("Addrs: {:?}",wal_addrs_eth);
-    println!("Addrs: {:?}",wal_addrs_token);
-    println!("--------------------");
-    let gas_for_main = wal_addrs_eth.len() * 21000;
-    let gas_for_tokens = wal_addrs_token.len() * 65000;
-    println!("gas for main: {:?}",gas_for_main);
-    println!("gas for tokens: {:?}",gas_for_tokens);
-
 }
 
 async fn refill(sweeper_prvk : &str, main_addrs : Vec<WalletAddress>, token_addrs : Vec<WalletAddress>, conf: Settings){
@@ -186,17 +93,24 @@ async fn refill(sweeper_prvk : &str, main_addrs : Vec<WalletAddress>, token_addr
 }
 
 
-async fn balance(conf: Settings, c_from: u32, c_to: u32) {
+async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
     println!("Calcing balances...");
     let rates = rates().await;
     let sweeper_prvk = conf.sweeper;
     let phrase = conf.hd_phrase;
-    let hdw_eth = HDWallet::Ethereum(HDSeed::new(&phrase));
+    //let hdw_eth = HDWallet::Ethereum(HDSeed::new(&phrase));
+    let hdw_eth = HDWallet::Tron(HDSeed::new(&phrase));
     let usdt = &conf.eth_token;
     let to = conf.eth_safe;
     let mut wal_addrs_eth: Vec<WalletAddress> = vec![];
     let mut wal_addrs_token: Vec<WalletAddress> = vec![];
-    let provider = &conf.eth_provider;
+    let provider = match crypto {
+        Crypto::Eth => {conf.eth_provider},
+        Crypto::Tron => {conf.tron_provider},
+        Crypto::BSC => {conf.bsc_provider},
+        Crypto::Polygon => {conf.plg_provider},
+        Crypto::Stellar => {conf.stl_provider},
+    };
 
     for i in c_from..c_to {
         println!("---------");
@@ -204,12 +118,12 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32) {
         println!("i: = {:?}, addr: {eth_i}", i);
         let eth_priv = hdw_eth.private(i as i32);
         let eth_pub = hdw_eth.public(i as i32);
-        let eth_bal = hdw_eth.balance(i as i32, provider).await;
-        let eth_bal_token = hdw_eth.balance_token(i as i32,usdt, provider).await;
+        let eth_bal = hdw_eth.balance(i as i32, &provider).await;
+        let eth_bal_token = ("", U256::zero());// hdw_eth.balance_token(i as i32,usdt, &provider).await;
         let eth_bal_f = eth_bal.1.as_u128() as f64 ;
         let eth_bal_f_prep = eth_bal_f / 1_000_000_000_000_000_000.0;
         let eth_bal_in_usd = eth_bal_f_prep * rates.eth;
-        let g_price = gas_price(provider).await.unwrap(); 
+        let g_price = gas_price(&provider).await.unwrap(); 
         let tx_fee: U256 = g_price * 21000 * 5;
         let tx_fee_prep = tx_fee.as_u128() as f64 / 1_000_000_000_000_000_000.0;
         if eth_bal_token.1 > U256::zero() {
@@ -230,24 +144,6 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32) {
         }
 
     }
-}
-#[allow(non_snake_case)]
-#[derive(Debug,Deserialize)]
-pub struct RatesRaw{
-    pub ETH: f64,
-    pub TRX: f64,
-    pub MATIC: f64,
-    pub BNB: f64,
-    pub XLM: f64,
-}
-
-#[derive(Debug,Deserialize)]
-pub struct Rates{
-    pub eth: f64,
-    pub trx: f64,
-    pub mtc: f64,
-    pub bnb: f64,
-    pub xlm: f64,
 }
 
 async fn rates() -> Rates {
