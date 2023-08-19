@@ -132,6 +132,14 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
         Crypto::Stellar => {rates.xlm},
     };
 
+    let decimals = match crypto {
+        Crypto::Eth => {1_000_000_000_000_000_000.0},
+        Crypto::Tron => {1_000_000.0},
+        Crypto::BSC => {1_000_000_000_000_000_000.0},
+        Crypto::Polygon => {1_000_000_000_000_000_000.0},
+        Crypto::Stellar => {1_000_000_000_000_000_000.0},
+    };
+
     for i in c_from..c_to {
         println!("---------");
         let addr_i = hdw.address(i as i32);
@@ -141,11 +149,11 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
         let addr_bal = hdw.balance(i as i32, &provider).await;
         let addr_bal_token = ("", U256::zero());// hdw.balance_token(i as i32,usdt, &provider).await;
         let addr_bal_f = addr_bal.1.as_u128() as f64 ;
-        let addr_bal_f_prep = addr_bal_f / 1_000_000.0;
+        let addr_bal_f_prep = addr_bal_f / decimals;
         let addr_bal_in_usd = addr_bal_f_prep * rate; 
         let g_price = gas_price(&provider).await.unwrap(); 
         let tx_fee: U256 = g_price * 21000 * 5;
-        let tx_fee_prep = tx_fee.as_u128() as f64 / 1_000_000.0;
+        let tx_fee_prep = tx_fee.as_u128() as f64 / decimals; 
         if addr_bal_token.1 > U256::zero() {
             wal_addrs_token.push(WalletAddress { id: i, address: addr_i.clone(), balance: addr_bal.1, balance_token: (usdt.to_owned(), addr_bal_token.1) });
             println!("Found {:.10} token money.",addr_bal_f_prep);
@@ -159,9 +167,11 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
             println!("bal: {:?}", addr_bal.1);
             println!("bal_in_usd: {:.15}", addr_bal_in_usd);
             println!("bal_token: {:?}", addr_bal_token.1);
+        }  
+        if addr_bal.1.is_zero() {
+            println!("Zero funds on address. Skipping.");
         } else {
-            println!("addr_bal: {:?}",addr_bal);
-            println!("No funds on wallet. Skipping")
+            println!("Funds < fee: {:.12} < {:.12}. Skipping.",addr_bal_f_prep,tx_fee_prep);
         }
 
     }
