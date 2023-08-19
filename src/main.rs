@@ -121,11 +121,11 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
         let eth_bal = hdw_eth.balance(i as i32, &provider).await;
         let eth_bal_token = ("", U256::zero());// hdw_eth.balance_token(i as i32,usdt, &provider).await;
         let eth_bal_f = eth_bal.1.as_u128() as f64 ;
-        let eth_bal_f_prep = eth_bal_f / 1_000_000_000_000_000_000.0;
-        let eth_bal_in_usd = eth_bal_f_prep * rates.eth;
+        let eth_bal_f_prep = eth_bal_f / 1_000_000.0;
+        let eth_bal_in_usd = eth_bal_f_prep * rates.trx;
         let g_price = gas_price(&provider).await.unwrap(); 
         let tx_fee: U256 = g_price * 21000 * 5;
-        let tx_fee_prep = tx_fee.as_u128() as f64 / 1_000_000_000_000_000_000.0;
+        let tx_fee_prep = tx_fee.as_u128() as f64 / 1_000_000.0;
         if eth_bal_token.1 > U256::zero() {
             wal_addrs_token.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
             println!("Found {:.10} token money.",eth_bal_f_prep);

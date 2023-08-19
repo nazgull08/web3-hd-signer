@@ -310,12 +310,20 @@ fn extended_pubk_to_addr_tron_hex(pubk: &ExtendedPubKey) -> String {
     let hex_exp_addr = hex::decode(&experimental_addr).unwrap();
     let s_hex_exp_addr = hex_exp_addr.as_slice();
     let val0 = digest(s_hex_exp_addr);
-    let hex_val0 = hex::decode(val0).unwrap();
+    let hex_val0 = hex::decode(&val0).unwrap();
     let s_hex_val0 = hex_val0.as_slice();
     let val1 = digest(s_hex_val0);
     let check_sum_val1 = &val1[0..8];
-    let final_addr = experimental_addr + check_sum_val1;
-    final_addr
+    let final_addr = (&experimental_addr).to_owned() + check_sum_val1;
+    let hex_addr = "0x".to_owned() + &k_addr[24..];
+    println!("=========");
+    println!("k_addr: {:?}",k_addr);
+    println!("experimental_addr: {:?}",&experimental_addr);
+    println!("val0: {:?}",&val0);
+    println!("final: {:?}",&final_addr);
+    println!("hex_addr: {:?}",&hex_addr);
+    println!("=========");
+    hex_addr
 }
 
 fn extended_pubk_to_addr_stellar(pubk: &ExtendedPubKey) -> String {
@@ -401,11 +409,7 @@ async fn eth_balance(seed: &HDSeed, index: i32, provider: &str) -> Result<(Strin
 async fn tron_balance(seed: &HDSeed, index: i32, provider: &str) -> Result<(String,web3::types::U256),web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let addr_str_0 = "0x".to_owned() + &tron_address_by_index_hex(seed, index);
-    let addr_str_1 = tron_address_by_index(seed, index);
-    println!("{:?}",addr_str_0);
-    println!("{:?}",addr_str_1);
-    let addr_str = "0x279f93bC1FEB8AF89D3253C5471b823c26671A92".to_owned();
+    let addr_str = tron_address_by_index_hex(seed, index);
     let addr = H160::from_str(&addr_str).unwrap();
     let bal = web3.eth().balance(addr, None).await.unwrap();
     Ok((addr_str, bal))
