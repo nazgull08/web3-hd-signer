@@ -99,10 +99,23 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
     let sweeper_prvk = conf.sweeper;
     let phrase = conf.hd_phrase;
     //let hdw_eth = HDWallet::Ethereum(HDSeed::new(&phrase));
-    let hdw_eth = HDWallet::Tron(HDSeed::new(&phrase));
-    let usdt = &conf.eth_token;
+    let hdw = match crypto {
+        Crypto::Eth => {HDWallet::Ethereum(HDSeed::new(&phrase))},
+        Crypto::Tron => {HDWallet::Tron(HDSeed::new(&phrase))},
+        Crypto::BSC => {HDWallet::Ethereum(HDSeed::new(&phrase))},
+        Crypto::Polygon => {HDWallet::Ethereum(HDSeed::new(&phrase))},
+        Crypto::Stellar => {HDWallet::Stellar(HDSeed::new(&phrase))},
+    }; 
+    
+    let usdt = match crypto {
+        Crypto::Eth => {conf.eth_token},
+        Crypto::Tron => {conf.tron_token},
+        Crypto::BSC => {conf.bsc_token},
+        Crypto::Polygon => {conf.plg_token},
+        Crypto::Stellar => {conf.stl_token},
+    };
     let to = conf.eth_safe;
-    let mut wal_addrs_eth: Vec<WalletAddress> = vec![];
+    let mut wal_addrs_main: Vec<WalletAddress> = vec![];
     let mut wal_addrs_token: Vec<WalletAddress> = vec![];
     let provider = match crypto {
         Crypto::Eth => {conf.eth_provider},
@@ -111,35 +124,43 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
         Crypto::Polygon => {conf.plg_provider},
         Crypto::Stellar => {conf.stl_provider},
     };
+    let rate = match crypto {
+        Crypto::Eth => {rates.eth},
+        Crypto::Tron => {rates.trx},
+        Crypto::BSC => {rates.bnb},
+        Crypto::Polygon => {rates.mtc},
+        Crypto::Stellar => {rates.xlm},
+    };
 
     for i in c_from..c_to {
         println!("---------");
-        let eth_i = hdw_eth.address(i as i32);
-        println!("i: = {:?}, addr: {eth_i}", i);
-        let eth_priv = hdw_eth.private(i as i32);
-        let eth_pub = hdw_eth.public(i as i32);
-        let eth_bal = hdw_eth.balance(i as i32, &provider).await;
-        let eth_bal_token = ("", U256::zero());// hdw_eth.balance_token(i as i32,usdt, &provider).await;
-        let eth_bal_f = eth_bal.1.as_u128() as f64 ;
-        let eth_bal_f_prep = eth_bal_f / 1_000_000.0;
-        let eth_bal_in_usd = eth_bal_f_prep * rates.trx;
+        let addr_i = hdw.address(i as i32);
+        println!("i: = {:?}, addr: {addr_i}", i);
+        let addr_priv = hdw.private(i as i32);
+        let addr_pub = hdw.public(i as i32);
+        let addr_bal = hdw.balance(i as i32, &provider).await;
+        let addr_bal_token = ("", U256::zero());// hdw.balance_token(i as i32,usdt, &provider).await;
+        let addr_bal_f = addr_bal.1.as_u128() as f64 ;
+        let addr_bal_f_prep = addr_bal_f / 1_000_000.0;
+        let addr_bal_in_usd = addr_bal_f_prep * rate; 
         let g_price = gas_price(&provider).await.unwrap(); 
         let tx_fee: U256 = g_price * 21000 * 5;
         let tx_fee_prep = tx_fee.as_u128() as f64 / 1_000_000.0;
-        if eth_bal_token.1 > U256::zero() {
-            wal_addrs_token.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
-            println!("Found {:.10} token money.",eth_bal_f_prep);
-            println!("bal: {:?}", eth_bal.1);
-            println!("bal_in_usd: {:.15}", eth_bal_in_usd);
-            println!("bal_token: {:?}", eth_bal_token.1);
+        if addr_bal_token.1 > U256::zero() {
+            wal_addrs_token.push(WalletAddress { id: i, address: addr_i.clone(), balance: addr_bal.1, balance_token: (usdt.to_owned(), addr_bal_token.1) });
+            println!("Found {:.10} token money.",addr_bal_f_prep);
+            println!("bal: {:?}", addr_bal.1);
+            println!("bal_in_usd: {:.15}", addr_bal_in_usd);
+            println!("bal_token: {:?}", addr_bal_token.1);
         }
-        if eth_bal.1 > tx_fee {
-            wal_addrs_eth.push(WalletAddress { id: i, address: eth_i.clone(), balance: eth_bal.1, balance_token: (usdt.to_owned(), eth_bal_token.1) });
-            println!("Found {:.10} main money. Tx fee {tx_fee_prep}",eth_bal_f_prep);
-            println!("bal: {:?}", eth_bal.1);
-            println!("bal_in_usd: {:.15}", eth_bal_in_usd);
-            println!("bal_token: {:?}", eth_bal_token.1);
+        if addr_bal.1 > tx_fee {
+            wal_addrs_main.push(WalletAddress { id: i, address: addr_i.clone(), balance: addr_bal.1, balance_token: (usdt.to_owned(), addr_bal_token.1) });
+            println!("Found {:.10} main money. Tx fee {tx_fee_prep}",addr_bal_f_prep);
+            println!("bal: {:?}", addr_bal.1);
+            println!("bal_in_usd: {:.15}", addr_bal_in_usd);
+            println!("bal_token: {:?}", addr_bal_token.1);
         } else {
+            println!("addr_bal: {:?}",addr_bal);
             println!("No funds on wallet. Skipping")
         }
 

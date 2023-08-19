@@ -84,7 +84,7 @@ impl HDWallet {
     pub async fn balance(&self, index: i32, provider: &str) -> (String, web3::types::U256) {
         match self {
             HDWallet::Ethereum(seed) => eth_balance(seed, index, provider).await.unwrap(),
-            HDWallet::Tron(seed) => tron_balance(seed, index, provider).await.unwrap(), //NTD total rework 
+            HDWallet::Tron(seed) => tron_balance(seed, index, provider).await.unwrap(),
             HDWallet::Stellar(seed) => eth_balance(seed, index, provider).await.unwrap(),
         }
     }
