@@ -89,10 +89,10 @@ impl HDWallet {
         }
     }
 
-    pub async fn balance_token(&self, index: i32, addr: &str, provider: &str) -> (String, web3::types::U256) {
+    pub async fn balance_token(&self, index: i32, addr: &str, provider: &str) -> (web3::types::U256) {
         match self {
             HDWallet::Ethereum(seed) => eth_balance_token(seed, index, addr, provider,Crypto::Eth).await.unwrap(),
-            HDWallet::Tron(seed) => eth_balance_token(seed, index, addr, provider,Crypto::Tron).await.unwrap(), //NTD total rework 
+            HDWallet::Tron(seed) => tron_balance_token(seed, index, addr, provider,Crypto::Tron).await.unwrap(), //NTD total rework 
             HDWallet::Stellar(seed) => eth_balance_token(seed, index, addr, provider,Crypto::Stellar).await.unwrap(),
         }
     }
@@ -316,13 +316,6 @@ fn extended_pubk_to_addr_tron_hex(pubk: &ExtendedPubKey) -> String {
     let check_sum_val1 = &val1[0..8];
     let final_addr = (&experimental_addr).to_owned() + check_sum_val1;
     let hex_addr = "0x".to_owned() + &k_addr[24..];
-    println!("=========");
-    println!("k_addr: {:?}",k_addr);
-    println!("experimental_addr: {:?}",&experimental_addr);
-    println!("val0: {:?}",&val0);
-    println!("final: {:?}",&final_addr);
-    println!("hex_addr: {:?}",&hex_addr);
-    println!("=========");
     hex_addr
 }
 
@@ -450,7 +443,7 @@ async fn eth_sweep_main(seed: &HDSeed, index: i32,to_str : &str, provider: &str)
     Ok("lalala".to_owned())
 }
 
-async fn eth_balance_token(seed: &HDSeed, index: i32, token_addr: &str, provider: &str,crypto: Crypto) -> Result<(String,web3::types::U256),web3::Error> {
+async fn eth_balance_token(seed: &HDSeed, index: i32, token_addr: &str, provider: &str,crypto: Crypto) -> Result<web3::types::U256,web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);
@@ -464,7 +457,27 @@ async fn eth_balance_token(seed: &HDSeed, index: i32, token_addr: &str, provider
     //let result = contract.query("balanceOf", (addr,), None, Options::default(), None);     
     //let balance_of: U256 = result.await.unwrap(); 
     let balance_of = U256::zero();
-    Ok((addr_str, balance_of))
+    Ok(balance_of)
+}
+
+async fn tron_balance_token(seed: &HDSeed, index: i32, token_addr: &str, provider: &str,crypto: Crypto) -> Result<web3::types::U256,web3::Error> {
+    let transport = web3::transports::Http::new(provider)?;
+    let web3 = web3::Web3::new(transport);
+    let addr_str = tron_address_by_index_hex(seed, index);
+    let addr = H160::from_str(&addr_str).unwrap();
+    let token_addr_v = base58::decode(token_addr).unwrap();
+    let token_addr_hex = hex::encode(&token_addr_v);
+    let token_addr_hex_p= "0x".to_owned() + &token_addr_hex[2..token_addr_hex.len()-8] ;
+    let token_address = H160::from_str(&token_addr_hex_p).unwrap();
+    let bal = web3.eth().balance(addr, None).await.unwrap();
+    let contract = match crypto {
+        Crypto::Tron => {Contract::from_json(web3.eth(), token_address, include_bytes!("../res/trc20.abi.json")).unwrap()},
+        _ => {Contract::from_json(web3.eth(), token_address, include_bytes!("../res/erc20.abi.json")).unwrap()}, 
+    }; 
+    //let result = contract.query("balanceOf", (addr,), None, Options::default(), None);     
+    //let balance_of: U256 = result.await.unwrap(); 
+    let balance_of = U256::zero();
+    Ok(balance_of)
 }
 
 

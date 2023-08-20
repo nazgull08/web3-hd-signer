@@ -45,7 +45,7 @@ async fn main() {
     match args.command {
         Commands::Balance{c_from: o_c_from, c_to: o_c_to} => {
             let (c_from,c_to) = match (o_c_to,o_c_from) {
-                (Some(cfrom),Some(cto)) => (cfrom,cto),
+                (Some(cfrom),Some(cto)) => (cto,cfrom),
                 _ => (0,10)
             };
             balance(conf,c_from,c_to,crypto).await;
@@ -147,26 +147,26 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
         let addr_priv = hdw.private(i as i32);
         let addr_pub = hdw.public(i as i32);
         let addr_bal = hdw.balance(i as i32, &provider).await;
-        let addr_bal_token = ("", U256::zero());// hdw.balance_token(i as i32,usdt, &provider).await;
+        let addr_bal_token= hdw.balance_token(i as i32,&usdt, &provider).await;
         let addr_bal_f = addr_bal.1.as_u128() as f64 ;
         let addr_bal_f_prep = addr_bal_f / decimals;
         let addr_bal_in_usd = addr_bal_f_prep * rate; 
         let g_price = gas_price(&provider).await.unwrap(); 
         let tx_fee: U256 = g_price * 21000 * 5;
         let tx_fee_prep = tx_fee.as_u128() as f64 / decimals; 
-        if addr_bal_token.1 > U256::zero() {
-            wal_addrs_token.push(WalletAddress { id: i, address: addr_i.clone(), balance: addr_bal.1, balance_token: (usdt.to_owned(), addr_bal_token.1) });
+        if addr_bal_token > U256::zero() {
+            wal_addrs_token.push(WalletAddress { id: i, address: addr_i.clone(), balance: addr_bal.1, balance_token: (usdt.to_owned(), addr_bal_token) });
             println!("Found {:.10} token money.",addr_bal_f_prep);
             println!("bal: {:?}", addr_bal.1);
             println!("bal_in_usd: {:.15}", addr_bal_in_usd);
-            println!("bal_token: {:?}", addr_bal_token.1);
+            println!("bal_token: {:?}", addr_bal_token);
         }
         if addr_bal.1 > tx_fee {
-            wal_addrs_main.push(WalletAddress { id: i, address: addr_i.clone(), balance: addr_bal.1, balance_token: (usdt.to_owned(), addr_bal_token.1) });
+            wal_addrs_main.push(WalletAddress { id: i, address: addr_i.clone(), balance: addr_bal.1, balance_token: (usdt.to_owned(), addr_bal_token) });
             println!("Found {:.10} main money. Tx fee {tx_fee_prep}",addr_bal_f_prep);
             println!("bal: {:?}", addr_bal.1);
             println!("bal_in_usd: {:.15}", addr_bal_in_usd);
-            println!("bal_token: {:?}", addr_bal_token.1);
+            println!("bal_token: {:?}", addr_bal_token);
         }  
         if addr_bal.1.is_zero() {
             println!("Zero funds on address. Skipping.");
