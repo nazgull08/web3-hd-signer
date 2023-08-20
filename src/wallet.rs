@@ -316,13 +316,6 @@ fn extended_pubk_to_addr_tron_hex(pubk: &ExtendedPubKey) -> String {
     let check_sum_val1 = &val1[0..8];
     let final_addr = (&experimental_addr).to_owned() + check_sum_val1;
     let hex_addr = "0x".to_owned() + &k_addr[24..];
-    println!("=========");
-    println!("k_addr: {:?}",k_addr);
-    println!("experimental_addr: {:?}",&experimental_addr);
-    println!("val0: {:?}",&val0);
-    println!("final: {:?}",&final_addr);
-    println!("hex_addr: {:?}",&hex_addr);
-    println!("=========");
     hex_addr
 }
 
