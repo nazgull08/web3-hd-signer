@@ -1,5 +1,5 @@
-pub mod wallet;
 pub mod types;
+pub mod wallet;
 
 #[cfg(test)]
 mod tests {
@@ -10,15 +10,15 @@ mod tests {
 
     #[test]
     fn test_wallet() {
-//        let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
+        //        let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
         let phrase = "super ordinary tip dirt claim rhythm example learn beauty thing region faint"; //a.into_phrase();
         println!("=======================");
-        println!("phrase: {:?}",&phrase);
+        println!("phrase: {:?}", &phrase);
         println!("=======================");
-        
+
         let hdw_eth = HDWallet::Ethereum(HDSeed::new(&phrase));
         let hdw_tron = HDWallet::Tron(HDSeed::new(&phrase));
- 
+
         for i in 0..2 {
             let eth_i = hdw_eth.address(i as i32);
             let tron_i = hdw_tron.address(i as i32);
@@ -37,6 +37,5 @@ mod tests {
             println!("pub: {:?}", tron_pub);
             println!("=======================");
         }
-
     }
 }
