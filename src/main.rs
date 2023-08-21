@@ -98,7 +98,6 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
     let rates = rates().await;
     let sweeper_prvk = conf.sweeper;
     let phrase = conf.hd_phrase;
-    //let hdw_eth = HDWallet::Ethereum(HDSeed::new(&phrase));
     let hdw = match crypto {
         Crypto::Eth => {HDWallet::Ethereum(HDSeed::new(&phrase))},
         Crypto::Tron => {HDWallet::Tron(HDSeed::new(&phrase))},
@@ -168,7 +167,7 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
             println!("bal_in_usd: {:.15}", addr_bal_in_usd);
             println!("bal_token: {:?}", addr_bal_token);
         }  
-        if addr_bal.1.is_zero() {
+        else if addr_bal.1.is_zero() {
             println!("Zero funds on address. Skipping.");
         } else {
             println!("Funds < fee: {:.12} < {:.12}. Skipping.",addr_bal_f_prep,tx_fee_prep);
