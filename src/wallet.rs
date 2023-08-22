@@ -82,7 +82,7 @@ impl HDWallet {
         }
     }
 
-    pub async fn balance(&self, index: i32, provider: &str) -> (String, web3::types::U256) {
+    pub async fn balance(&self, index: i32, provider: &str) -> web3::types::U256 {
         match self {
             HDWallet::Ethereum(seed) => eth_balance(seed, index, provider).await.unwrap(),
             HDWallet::Tron(seed) => tron_balance(seed, index, provider).await.unwrap(),
@@ -409,26 +409,26 @@ async fn eth_balance(
     seed: &HDSeed,
     index: i32,
     provider: &str,
-) -> Result<(String, web3::types::U256), web3::Error> {
+) -> Result<web3::types::U256, web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);
     let addr = H160::from_str(&addr_str).unwrap();
     let bal = web3.eth().balance(addr, None).await.unwrap();
-    Ok((addr_str, bal))
+    Ok(bal)
 }
 
 async fn tron_balance(
     seed: &HDSeed,
     index: i32,
     provider: &str,
-) -> Result<(String, web3::types::U256), web3::Error> {
+) -> Result<web3::types::U256, web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = tron_address_by_index_hex(seed, index);
     let addr = H160::from_str(&addr_str).unwrap();
     let bal = web3.eth().balance(addr, None).await.unwrap();
-    Ok((addr_str, bal))
+    Ok(bal)
 }
 
 async fn eth_sweep_main(

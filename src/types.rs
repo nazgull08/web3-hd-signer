@@ -56,6 +56,21 @@ pub enum Crypto {
     Stellar,
 }
 
+#[derive(Debug, Clone)]
+pub enum BalanceState {
+    Empty,
+    Tokens {
+        tokens_balance: Vec<(String, U256)>,
+    },
+    TokensMain {
+        tokens_balance: Vec<(String, U256)>,
+        balance: U256,
+    },
+    Main {
+        balance: U256,
+    },
+}
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
