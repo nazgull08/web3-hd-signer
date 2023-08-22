@@ -95,7 +95,7 @@ impl HDWallet {
         index: i32,
         addr: &str,
         provider: &str,
-    ) -> (web3::types::U256) {
+    ) -> (web3::types::U256,u32) {
         match self {
             HDWallet::Ethereum(seed) => eth_balance_token(seed, index, addr, provider)
                 .await
@@ -479,13 +479,12 @@ async fn eth_balance_token(
     index: i32,
     token_addr: &str,
     provider: &str,
-) -> Result<web3::types::U256, web3::Error> {
+) -> Result<(web3::types::U256,u32), web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);
     let addr = H160::from_str(&addr_str).unwrap();
     let token_address = H160::from_str(&token_addr).unwrap();
-    let bal = web3.eth().balance(addr, None).await.unwrap();
     let contract = Contract::from_json(
         web3.eth(),
         token_address,
@@ -493,8 +492,9 @@ async fn eth_balance_token(
     )
     .unwrap();
     let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
+    let decimals : u32 = contract.query("decimals", (), None, Options::default(), None).await.unwrap();
     let balance_of: U256 = result.await.unwrap();
-    Ok(balance_of)
+    Ok((balance_of,decimals))
 }
 
 async fn tron_balance_token(
@@ -502,7 +502,7 @@ async fn tron_balance_token(
     index: i32,
     token_addr: &str,
     provider: &str,
-) -> Result<web3::types::U256, web3::Error> {
+) -> Result<(web3::types::U256,u32), web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = tron_address_by_index_hex(seed, index);
@@ -511,7 +511,6 @@ async fn tron_balance_token(
     let token_addr_hex = hex::encode(&token_addr_v);
     let token_addr_hex_p = "0x".to_owned() + &token_addr_hex[2..token_addr_hex.len() - 8];
     let token_address = H160::from_str(&token_addr_hex_p).unwrap();
-    let bal = web3.eth().balance(addr, None).await.unwrap();
     let contract = Contract::from_json(
         web3.eth(),
         token_address,
@@ -519,9 +518,9 @@ async fn tron_balance_token(
     )
     .unwrap();
     let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
+    let decimals : u32 = contract.query("decimals", (), None, Options::default(), None).await.unwrap();
     let balance_of: U256 = result.await.unwrap();
-    //let balance_of = U256::zero();
-    Ok(balance_of)
+    Ok((balance_of,decimals))
 }
 
 async fn eth_sweep_token(
