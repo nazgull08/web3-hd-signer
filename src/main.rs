@@ -160,12 +160,9 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
         println!("---------");
         let addr_i = hdw.address(i as i32);
         println!("i: = {:?}, addr: {addr_i}", i);
-        let addr_bal = hdw.balance(i as i32, &provider).await;
         let addr_bal_token = hdw.balance_token(i as i32, &usdt, &provider).await;
         let addr_bal_token_f = addr_bal_token.0.as_u128() as f64 / (10u32.pow(addr_bal_token.1) as f64);
-        let addr_bal_f = addr_bal.as_u128() as f64;
-        let addr_bal_f_prep = addr_bal_f / decimals;
-        let addr_bal_in_usd = addr_bal_f_prep * rate;
+        let (main_bal,main_bal_usd) = check_main_balance(&hdw, i as i32, &provider, decimals, rate).await;
         let g_price = gas_price(&provider).await.unwrap();
         let tx_fee: U256 = g_price * 21000 * 5;
         let tx_fee_prep = tx_fee.as_u128() as f64 / decimals;
@@ -173,50 +170,57 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
             wal_addrs_token.push(WalletAddress {
                 id: i,
                 address: addr_i.clone(),
-                balance: addr_bal,
+                balance: main_bal,
                 balance_token: (usdt.to_owned(), addr_bal_token.0),
             });
             println!("Found {:.10} token money.", addr_bal_token_f);
-            println!("bal: {:?}", addr_bal);
-            println!("bal_in_usd: {:.15}", addr_bal_in_usd);
+            println!("bal: {:?}", main_bal);
+            println!("bal_in_usd: {:.15}", main_bal_usd);
             println!("bal_token: {:?}", addr_bal_token);
         }
-        if addr_bal > tx_fee {
+        if main_bal > tx_fee {
             wal_addrs_main.push(WalletAddress {
                 id: i,
                 address: addr_i.clone(),
-                balance: addr_bal,
+                balance: main_bal,
                 balance_token: (usdt.to_owned(), addr_bal_token.0),
             });
-            println!(
-                "Found {:.10} main money. Tx fee {tx_fee_prep}",
-                addr_bal_f_prep
-            );
-            println!("bal: {:?}", addr_bal);
-            println!("bal_in_usd: {:.15}", addr_bal_in_usd);
+            println!("bal: {:?}", main_bal);
+            println!("bal_in_usd: {:.15}", main_bal_usd);
             println!("bal_token: {:?}", addr_bal_token);
-        } else if (addr_bal.is_zero() && addr_bal_token.0.is_zero()) {
+        } else if (main_bal.is_zero() && addr_bal_token.0.is_zero()) {
             println!("Zero funds on address. Skipping.");
         } else {
             println!(
                 "Funds < fee: {:.12} < {:.12}. Skipping.",
-                addr_bal_f_prep, tx_fee_prep
+                main_bal, tx_fee_prep
             );
         }
     }
 }
 
 async fn check_main_balance(
-    hdw: HDWallet,
+    hdw: &HDWallet,
     id: i32,
     provider: &str,
     decimals: f64,
     rate: f64,
-) -> f64 {
+) -> (U256,f64) {
     let addr_bal = hdw.balance(id, &provider).await;
     let addr_bal_f = addr_bal.as_u128() as f64;
     let addr_bal_f_prep = addr_bal_f / decimals;
-    addr_bal_f_prep * rate
+    (addr_bal,addr_bal_f_prep * rate)
+}
+
+async fn check_tokens_balance(
+    hdw: &HDWallet,
+    id: i32,
+    provider: &str,
+) -> (U256,f64) {
+    let addr_bal = hdw.balance(id, &provider).await;
+    let addr_bal_f = addr_bal.as_u128() as f64;
+    let addr_bal_f_prep = addr_bal_f / decimals;
+    (addr_bal,addr_bal_f_prep * rate)
 }
 
 async fn rates() -> Rates {
