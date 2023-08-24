@@ -216,7 +216,11 @@ async fn check_tokens_balance(
     hdw: &HDWallet,
     id: i32,
     provider: &str,
+    tokens: Vec<String>
 ) -> (U256,f64) {
+    
+    let addr_bal_token = hdw.balance_token(i as i32, &usdt, &provider).await;
+    let addr_bal_token_f = addr_bal_token.0.as_u128() as f64 / (10u32.pow(addr_bal_token.1) as f64);
     let addr_bal = hdw.balance(id, &provider).await;
     let addr_bal_f = addr_bal.as_u128() as f64;
     let addr_bal_f_prep = addr_bal_f / decimals;
