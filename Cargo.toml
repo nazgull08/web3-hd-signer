@@ -9,11 +9,11 @@ repository = "https://github.com/nazgull08/web3-hd-signer"
 keywords = ["web3","wallet","hd"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
-name = "web3_hd"
+name = "web3_hd_signer"
 path = "src/lib.rs"
 
 [[bin]]
-name = "web3_hd"
+name = "web3_hd_signer"
 path = "src/main.rs"
 
 [dependencies]
