@@ -6,7 +6,7 @@ use bip39::Mnemonic;
 use config::Config;
 use serde_derive::Deserialize;
 use web3::types::{H160, H256, U256};
-use web3_hd::wallet::{gas_price, send_main, tx_info, tx_receipt, HDSeed, HDWallet};
+use web3_hd::wallet::{gas_price, send_main, tx_info, tx_receipt, HDSeed, HDWallet, validate_tron_address};
 
 use clap::{Parser, Subcommand, ValueEnum};
 

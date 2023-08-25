@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use hex::ToHex;
+use sha2::Sha256;
 use ::sha256::digest;
 use bip39::Language;
 use bip39::{Mnemonic, Seed};
@@ -12,7 +14,8 @@ use bitcoin::{
 };
 use secp256k1::Secp256k1;
 use serde::{Deserialize, Serialize};
-use sha3::{Digest, Keccak256};
+use sha256::digest_bytes;
+use sha3::{Digest, Keccak256, Sha3_256};
 use web3::contract::{Contract, Options};
 use web3::types::{
     Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256,
@@ -628,4 +631,25 @@ pub async fn send_main(
         .await?;
     println!("Tx succeeded with hash: {}", result);
     Ok(result)
+}
+
+pub fn validate_tron_address(addr: String) -> bool {
+    if addr.len() != 34 {
+        false
+    } else {
+        let r_bytes= base58::decode(&addr);
+        match r_bytes {
+            Ok(mut bytes) => {
+                let check = bytes.split_off(bytes.len() - 4);
+                let mut hasher = Sha256::new();
+                hasher.update(&bytes);
+                let digest1 = hasher.finalize();
+                let mut hasher = Sha256::new();
+                hasher.update(&digest1);
+                let digest = hasher.finalize();
+                check == &digest[..4]
+            },
+            Err(_) => {false}
+        } 
+    }
 }

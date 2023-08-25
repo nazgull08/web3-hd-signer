@@ -2443,6 +2443,7 @@ dependencies = [
  "secp256k1",
  "serde",
  "serde_derive",
+ "sha2 0.9.9",
  "sha256",
  "sha3 0.9.1",
  "tiny-bip39",
