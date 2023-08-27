@@ -1,9 +1,9 @@
 pub mod types;
+pub mod functions;
 pub mod wallet;
 
 #[cfg(test)]
 mod tests {
-    use bip39::Mnemonic;
 
     use crate::wallet::HDSeed;
     use crate::wallet::HDWallet;
