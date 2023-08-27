@@ -149,11 +149,11 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
     };
 
     let decimals = match crypto {
-        Crypto::Eth => 1_000_000_000_000_000_000.0,
-        Crypto::Tron => 1_000_000.0,
-        Crypto::BSC => 1_000_000_000_000_000_000.0,
-        Crypto::Polygon => 1_000_000_000_000_000_000.0,
-        Crypto::Stellar => 1_000_000_000_000_000_000.0,
+        Crypto::Eth => U256::exp10(16), 
+        Crypto::Tron => U256::exp10(4), 
+        Crypto::BSC => U256::exp10(16),
+        Crypto::Polygon => U256::exp10(16),
+        Crypto::Stellar => U256::exp10(16)
     };
 
     for i in c_from..c_to {
@@ -162,17 +162,18 @@ async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
         println!("i: = {:?}, addr: {addr_i}", i);
         let (main_bal,main_bal_usd) = check_main_balance(&hdw, i as i32, &provider, decimals, rate).await;
         let tokens_bal = check_tokens_balance(&hdw, i as i32, &provider, &tokens).await;
+        println!("tokens_bal: {:?}", tokens_bal);
         let g_price = gas_price(&provider).await.unwrap();
         let tx_fee: U256 = g_price * 21000 * 5;
-        let tx_fee_prep = tx_fee.as_u128() as f64 / decimals;
+        let tx_fee_prep = (tx_fee / decimals).as_u128() as f64 * 0.01;
         for t in tokens_bal {
-            if t.1 > U256::zero() {
-                println!("Found {:.10} token money.", t.2);
-                println!("bal_token: {:?}", t.0);
+            if t.balance > U256::zero() {
+                println!("Found {:.4} token money.", t.balance_f);
+                println!("bal_token: {:?}", t.symbol);
             }
         }
         if main_bal > tx_fee {
-            println!("bal: {:?}", main_bal);
+            println!("bal: {:?}", main_bal/decimals);
             println!("bal_in_usd: {:.15}", main_bal_usd);
         } else if main_bal.is_zero() { 
             println!("Zero funds on address. Skipping.");
@@ -189,12 +190,12 @@ async fn check_main_balance(
     hdw: &HDWallet,
     id: i32,
     provider: &str,
-    decimals: f64,
+    decimals: U256,
     rate: f64,
 ) -> (U256,f64) {
     let addr_bal = hdw.balance(id, &provider).await;
-    let addr_bal_f = addr_bal.as_u128() as f64;
-    let addr_bal_f_prep = addr_bal_f / decimals;
+    let addr_bal_f = addr_bal / decimals;
+    let addr_bal_f_prep = addr_bal_f.as_u128() as f64 * 0.01;
     (addr_bal,addr_bal_f_prep * rate)
 }
 
@@ -203,13 +204,12 @@ async fn check_tokens_balance(
     id: i32,
     provider: &str,
     tokens: &Vec<String>
-) -> Vec<(String,U256,f64)> {
-    let mut tokens_balances : Vec<(String,U256,f64)> = vec![];
+) -> Vec<TokenData> {
+    let mut tokens_balances : Vec<TokenData> = vec![];
     for token in tokens{
-        let bal_token = hdw.balance_token(id as i32, &token, &provider).await;
-        let bal_token_f = bal_token.0.as_u128() as f64 / (10u32.pow(bal_token.1) as f64);
-        tokens_balances.push((token.to_owned(),bal_token.0,bal_token_f));
-    }
+        let t_data = hdw.balance_token(id as i32, &token, &provider).await;
+        tokens_balances.push(t_data);
+    };
     tokens_balances
 }
 

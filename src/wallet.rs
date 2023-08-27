@@ -98,7 +98,7 @@ impl HDWallet {
         index: i32,
         addr: &str,
         provider: &str,
-    ) -> (web3::types::U256,u32) {
+    ) -> TokenData {
         match self {
             HDWallet::Ethereum(seed) => eth_balance_token(seed, index, addr, provider)
                 .await
@@ -482,7 +482,7 @@ async fn eth_balance_token(
     index: i32,
     token_addr: &str,
     provider: &str,
-) -> Result<(web3::types::U256,u32), web3::Error> {
+) -> Result<TokenData, web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);
@@ -495,9 +495,18 @@ async fn eth_balance_token(
     )
     .unwrap();
     let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
-    let decimals : u32 = contract.query("decimals", (), None, Options::default(), None).await.unwrap();
-    let balance_of: U256 = result.await.unwrap();
-    Ok((balance_of,decimals))
+    let decimals : u8 = contract.query("decimals", (), None, Options::default(), None).await.unwrap();
+    let symbol: String = contract.query("symbol", (), None, Options::default(), None).await.unwrap();
+    let balance = result.await.unwrap();
+    let balance_calced: U256 = (balance) / (U256::exp10((decimals-2) as usize));
+    let balance_f = (balance_calced.as_u128() as f64) * 0.01;
+    let token_data = TokenData{
+        balance,
+        balance_f,
+        decimals,
+        symbol
+    };
+    Ok(token_data)
 }
 
 async fn tron_balance_token(
@@ -505,7 +514,7 @@ async fn tron_balance_token(
     index: i32,
     token_addr: &str,
     provider: &str,
-) -> Result<(web3::types::U256,u32), web3::Error> {
+) -> Result<TokenData, web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = tron_address_by_index_hex(seed, index);
@@ -521,9 +530,18 @@ async fn tron_balance_token(
     )
     .unwrap();
     let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
-    let decimals : u32 = contract.query("decimals", (), None, Options::default(), None).await.unwrap();
-    let balance_of: U256 = result.await.unwrap();
-    Ok((balance_of,decimals))
+    let decimals : u8 = contract.query("decimals", (), None, Options::default(), None).await.unwrap();
+    let symbol : String = contract.query("symbol", (), None, Options::default(), None).await.unwrap();
+    let balance: U256 = result.await.unwrap();
+    let balance_calced: U256 = (balance) / (U256::exp10((decimals-2) as usize));
+    let balance_f = (balance_calced.as_u128() as f64) * 0.01;
+    let token_data = TokenData{
+        balance,
+        balance_f,
+        decimals,
+        symbol
+    };
+    Ok(token_data)
 }
 
 async fn eth_sweep_token(
