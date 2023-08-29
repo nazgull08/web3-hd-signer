@@ -1,7 +1,5 @@
 use std::str::FromStr;
 
-use hex::ToHex;
-use sha2::Sha256;
 use ::sha256::digest;
 use bip39::Language;
 use bip39::{Mnemonic, Seed};
@@ -12,8 +10,10 @@ use bitcoin::{
     network::constants::Network,
     PublicKey,
 };
+use hex::ToHex;
 use secp256k1::Secp256k1;
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 use sha256::digest_bytes;
 use sha3::{Digest, Keccak256, Sha3_256};
 use web3::contract::{Contract, Options};
@@ -93,12 +93,7 @@ impl HDWallet {
         }
     }
 
-    pub async fn balance_token(
-        &self,
-        index: i32,
-        addr: &str,
-        provider: &str,
-    ) -> TokenData {
+    pub async fn balance_token(&self, index: i32, addr: &str, provider: &str) -> TokenData {
         match self {
             HDWallet::Ethereum(seed) => eth_balance_token(seed, index, addr, provider)
                 .await
@@ -495,16 +490,22 @@ async fn eth_balance_token(
     )
     .unwrap();
     let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
-    let decimals : u8 = contract.query("decimals", (), None, Options::default(), None).await.unwrap();
-    let symbol: String = contract.query("symbol", (), None, Options::default(), None).await.unwrap();
+    let decimals: u8 = contract
+        .query("decimals", (), None, Options::default(), None)
+        .await
+        .unwrap();
+    let symbol: String = contract
+        .query("symbol", (), None, Options::default(), None)
+        .await
+        .unwrap();
     let balance = result.await.unwrap();
-    let balance_calced: U256 = (balance) / (U256::exp10((decimals-2) as usize));
+    let balance_calced: U256 = (balance) / (U256::exp10((decimals - 2) as usize));
     let balance_f = (balance_calced.as_u128() as f64) * 0.01;
-    let token_data = TokenData{
+    let token_data = TokenData {
         balance,
         balance_f,
         decimals,
-        symbol
+        symbol,
     };
     Ok(token_data)
 }
@@ -530,16 +531,22 @@ async fn tron_balance_token(
     )
     .unwrap();
     let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
-    let decimals : u8 = contract.query("decimals", (), None, Options::default(), None).await.unwrap();
-    let symbol : String = contract.query("symbol", (), None, Options::default(), None).await.unwrap();
+    let decimals: u8 = contract
+        .query("decimals", (), None, Options::default(), None)
+        .await
+        .unwrap();
+    let symbol: String = contract
+        .query("symbol", (), None, Options::default(), None)
+        .await
+        .unwrap();
     let balance: U256 = result.await.unwrap();
-    let balance_calced: U256 = (balance) / (U256::exp10((decimals-2) as usize));
+    let balance_calced: U256 = (balance) / (U256::exp10((decimals - 2) as usize));
     let balance_f = (balance_calced.as_u128() as f64) * 0.01;
-    let token_data = TokenData{
+    let token_data = TokenData {
         balance,
         balance_f,
         decimals,
-        symbol
+        symbol,
     };
     Ok(token_data)
 }
@@ -655,7 +662,7 @@ pub fn validate_tron_address(addr: String) -> bool {
     if addr.len() != 34 {
         false
     } else {
-        let r_bytes= base58::decode(&addr);
+        let r_bytes = base58::decode(&addr);
         match r_bytes {
             Ok(mut bytes) => {
                 let check = bytes.split_off(bytes.len() - 4);
@@ -666,8 +673,8 @@ pub fn validate_tron_address(addr: String) -> bool {
                 hasher.update(&digest1);
                 let digest = hasher.finalize();
                 check == &digest[..4]
-            },
-            Err(_) => {false}
-        } 
+            }
+            Err(_) => false,
+        }
     }
 }

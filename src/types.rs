@@ -107,4 +107,3 @@ pub struct TokenData {
     pub decimals: u8,
     pub symbol: String,
 }
-

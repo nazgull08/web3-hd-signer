@@ -6,12 +6,14 @@ use bip39::Mnemonic;
 use config::Config;
 use serde_derive::Deserialize;
 use web3::types::{H160, H256, U256};
-use web3_hd_signer::wallet::{gas_price, send_main, tx_info, tx_receipt, HDSeed, HDWallet, validate_tron_address};
+use web3_hd_signer::wallet::{
+    gas_price, send_main, tx_info, tx_receipt, validate_tron_address, HDSeed, HDWallet,
+};
 
 use clap::{Parser, Subcommand, ValueEnum};
 
-use web3_hd_signer::types::*;
 use web3_hd_signer::functions::*;
+use web3_hd_signer::types::*;
 
 //NTD
 // ETH gas usage 94,795 | 63,197
@@ -49,8 +51,7 @@ async fn main() {
                 (Some(cfrom), Some(cto)) => (cto, cfrom),
                 _ => (0, 10),
             };
-            balance
-            (conf, c_from, c_to, crypto).await;
+            balance(conf, c_from, c_to, crypto).await;
         }
         Commands::Refill => {
             println!("Implement refill...");
@@ -112,4 +113,3 @@ async fn generate_hd_prase() -> () {
     println!("-----------");
     println!("{:?}", phrase);
 }
-
