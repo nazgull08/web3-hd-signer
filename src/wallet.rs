@@ -10,17 +10,14 @@ use bitcoin::{
     network::constants::Network,
     PublicKey,
 };
-use hex::ToHex;
 use secp256k1::Secp256k1;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
-use sha256::digest_bytes;
-use sha3::{Digest, Keccak256, Sha3_256};
+use sha3::{Digest, Keccak256};
 use web3::contract::{Contract, Options};
 use web3::types::{
     Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256,
 };
-use web3::Web3;
 
 use crate::types::*;
 
@@ -107,7 +104,7 @@ impl HDWallet {
         }
     }
 
-    pub async fn sweep(&self, index: i32, to: &str, provider: &str) -> (String) {
+    pub async fn sweep(&self, index: i32, to: &str, provider: &str) -> String {
         match self {
             HDWallet::Ethereum(seed) => eth_sweep_main(seed, index, to, provider).await.unwrap(),
             HDWallet::Tron(seed) => eth_sweep_main(seed, index, to, provider).await.unwrap(), //NTD total rework
@@ -115,7 +112,7 @@ impl HDWallet {
         }
     }
 
-    pub async fn sweep_token(&self, index: i32, addr: &str, to: &str, provider: &str) -> (String) {
+    pub async fn sweep_token(&self, index: i32, addr: &str, to: &str, provider: &str) -> String {
         match self {
             HDWallet::Ethereum(seed) => {
                 eth_sweep_token(seed, index, addr, to, provider, Crypto::Eth)
@@ -199,6 +196,7 @@ fn tron_address_by_index_hex(seed: &HDSeed, index: i32) -> String {
     extended_pubk_to_addr_tron_hex(&pubk)
 }
 
+#[allow(dead_code)]
 fn stellar_address_by_index(seed: &HDSeed, index: i32) -> String {
     let hd_path_str = format!("m/44'/148'/0'/0/{index}");
     let seed_m = Seed::new(&seed.mnemonic, "");
@@ -325,19 +323,11 @@ fn extended_pubk_to_addr_tron_hex(pubk: &ExtendedPubKey) -> String {
     let pubk_bytes = hex::decode(pubk_uncomp).unwrap();
     let k_addr = &keccak_hash(&pubk_bytes);
     //keep last 20 bytes of the result
-    let experimental_addr = "41".to_owned() + &k_addr[24..];
-    let hex_exp_addr = hex::decode(&experimental_addr).unwrap();
-    let s_hex_exp_addr = hex_exp_addr.as_slice();
-    let val0 = digest(s_hex_exp_addr);
-    let hex_val0 = hex::decode(&val0).unwrap();
-    let s_hex_val0 = hex_val0.as_slice();
-    let val1 = digest(s_hex_val0);
-    let check_sum_val1 = &val1[0..8];
-    let final_addr = (&experimental_addr).to_owned() + check_sum_val1;
     let hex_addr = "0x".to_owned() + &k_addr[24..];
     hex_addr
 }
 
+#[allow(dead_code)]
 fn extended_pubk_to_addr_stellar(pubk: &ExtendedPubKey) -> String {
     //massage into the right format
     let pubk_str = pubk.public_key.to_string();
@@ -372,10 +362,10 @@ where
     hex::encode(result)
 }
 
+#[allow(dead_code)]
 fn get_private(seed: &[u8], hd_path: &DerivationPath) -> (ExtendedPrivKey, ExtendedPubKey) {
     let secp = Secp256k1::new();
     let pk = ExtendedPrivKey::new_master(Network::Bitcoin, seed)
-        // we convert HD Path to bitcoin lib format (DerivationPath)
         .and_then(|k| k.derive_priv(&secp, hd_path))
         .unwrap();
     let pubk = ExtendedPubKey::from_priv(&secp, &pk);
@@ -395,13 +385,14 @@ fn eth_sign(seed: &HDSeed, index: i32) -> String {
     pubk.public_key.to_string()
 }
 
-fn tron_sign(seed: &HDSeed, index: i32) -> String {
+fn tron_sign(_seed: &HDSeed, _index: i32) -> String {
     "lalala".to_owned()
 }
 
-fn stellar_sign(seed: &HDSeed, index: i32) -> String {
+fn stellar_sign(_seed: &HDSeed, _index: i32) -> String {
     "lalala".to_owned()
 }
+
 
 async fn eth_balance(
     seed: &HDSeed,
@@ -557,7 +548,7 @@ async fn eth_sweep_token(
     token_addr: &str,
     to_str: &str,
     provider: &str,
-    crypto: Crypto,
+    _: Crypto,
 ) -> Result<String, web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
@@ -600,13 +591,11 @@ async fn eth_sweep_token(
     Ok("lalala".to_owned())
 }
 
-fn trn_balance(seed: &HDSeed, index: i32) -> (String, web3::types::U256) {
+/*
+fn stellar_balance(_seed: &HDSeed, _index: i32) -> (String, web3::types::U256) {
     ("".to_owned(), web3::types::U256::zero())
 }
-
-fn stellar_balance(seed: &HDSeed, index: i32) -> (String, web3::types::U256) {
-    ("".to_owned(), web3::types::U256::zero())
-}
+*/
 
 pub async fn gas_price(provider: &str) -> Result<U256, web3::Error> {
     let transport = web3::transports::Http::new(provider)?;

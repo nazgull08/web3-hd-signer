@@ -1,11 +1,4 @@
-use std::{collections::HashMap, str::FromStr, thread};
-
-use bip39::Mnemonic;
-use config::Config;
-use serde_derive::Deserialize;
-use web3::types::{H160, H256, U256};
-
-use clap::{Parser, Subcommand, ValueEnum};
+use web3::types::U256;
 
 use crate::{
     types::*,
@@ -31,9 +24,6 @@ pub async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
         Crypto::Polygon => conf.plg_tokens,
         Crypto::Stellar => conf.stl_tokens,
     };
-    let to = conf.eth_safe;
-    let mut wal_addrs_main: Vec<WalletAddress> = vec![];
-    let mut wal_addrs_token: Vec<WalletAddress> = vec![];
     let provider = match crypto {
         Crypto::Eth => conf.eth_provider,
         Crypto::Tron => conf.tron_provider,

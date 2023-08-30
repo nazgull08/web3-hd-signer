@@ -1,9 +1,5 @@
-use std::{collections::HashMap, str::FromStr, thread};
-
-use bip39::Mnemonic;
-use config::Config;
 use serde_derive::Deserialize;
-use web3::types::{H160, H256, U256};
+use web3::types::U256;
 
 use clap::{Parser, Subcommand, ValueEnum};
 

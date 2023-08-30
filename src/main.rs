@@ -1,16 +1,14 @@
 #![feature(let_chains)]
 
-use std::{collections::HashMap, str::FromStr, thread};
+use std::{thread,time};
 
 use bip39::Mnemonic;
 use config::Config;
-use serde_derive::Deserialize;
-use web3::types::{H160, H256, U256};
 use web3_hd_signer::wallet::{
-    gas_price, send_main, tx_info, tx_receipt, validate_tron_address, HDSeed, HDWallet,
+    gas_price, send_main, tx_info
 };
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::Parser;
 
 use web3_hd_signer::functions::*;
 use web3_hd_signer::types::*;
@@ -83,7 +81,7 @@ async fn refill(
         println!("{:?}", info);
         while info.transaction_index == None {
             println!("waiting for confirmation...");
-            thread::sleep_ms(5000);
+            thread::sleep(time::Duration::from_secs(5));
             info = tx_info(hash, provider).await.unwrap();
         }
         println!("---------confirmed-----------");
