@@ -21,11 +21,13 @@ use web3::types::{
 
 use crate::types::*;
 
+use stellar_sdk::{types::Asset, utils::Endpoint, CallBuilder, Keypair, Server};
+
 #[derive(Debug, Clone)]
 pub enum HDWallet {
     Ethereum(HDSeed),
     Tron(HDSeed),
-    Stellar(HDSeed),
+    Stellar(String),
 }
 /* NTD proper errors
 #[derive(Debug, Clone)]
@@ -54,7 +56,7 @@ impl HDWallet {
         match self {
             HDWallet::Ethereum(seed) => eth_address_by_index(seed, index),
             HDWallet::Tron(seed) => tron_address_by_index(seed, index),
-            HDWallet::Stellar(seed) => tron_address_by_index(seed, index),
+            HDWallet::Stellar(master_key) => stellar_address_by_index(master_key, index),
         }
     }
 
@@ -62,7 +64,7 @@ impl HDWallet {
         match self {
             HDWallet::Ethereum(seed) => eth_private_by_index(seed, index),
             HDWallet::Tron(seed) => tron_private_by_index(seed, index),
-            HDWallet::Stellar(seed) => tron_private_by_index(seed, index),
+            HDWallet::Stellar(master_key) => stellar_address_by_index(master_key, index),
         }
     }
 
@@ -70,7 +72,7 @@ impl HDWallet {
         match self {
             HDWallet::Ethereum(seed) => eth_public_by_index(seed, index),
             HDWallet::Tron(seed) => tron_public_by_index(seed, index),
-            HDWallet::Stellar(seed) => tron_public_by_index(seed, index),
+            HDWallet::Stellar(master_key) => stellar_address_by_index(master_key, index),
         }
     }
 
@@ -78,7 +80,7 @@ impl HDWallet {
         match self {
             HDWallet::Ethereum(seed) => eth_sign(seed, index),
             HDWallet::Tron(seed) => tron_sign(seed, index),
-            HDWallet::Stellar(seed) => stellar_sign(seed, index),
+            HDWallet::Stellar(master_key) => stellar_sign(master_key, index),
         }
     }
 
@@ -86,7 +88,7 @@ impl HDWallet {
         match self {
             HDWallet::Ethereum(seed) => eth_balance(seed, index, provider).await.unwrap(),
             HDWallet::Tron(seed) => tron_balance(seed, index, provider).await.unwrap(),
-            HDWallet::Stellar(seed) => eth_balance(seed, index, provider).await.unwrap(),
+            HDWallet::Stellar(master_key) => stellar_balance(master_key, index,provider).await.unwrap(),
         }
     }
 
@@ -98,7 +100,7 @@ impl HDWallet {
             HDWallet::Tron(seed) => tron_balance_token(seed, index, addr, provider)
                 .await
                 .unwrap(), //NTD total rework
-            HDWallet::Stellar(seed) => eth_balance_token(seed, index, addr, provider)
+            HDWallet::Stellar(master_key) => stellar_balance_token(master_key, index, addr, provider)
                 .await
                 .unwrap(),
         }
@@ -108,7 +110,7 @@ impl HDWallet {
         match self {
             HDWallet::Ethereum(seed) => eth_sweep_main(seed, index, to, provider).await.unwrap(),
             HDWallet::Tron(seed) => eth_sweep_main(seed, index, to, provider).await.unwrap(), //NTD total rework
-            HDWallet::Stellar(seed) => eth_sweep_main(seed, index, to, provider).await.unwrap(),
+            HDWallet::Stellar(master_key) => "unimplemented".to_owned(),
         }
     }
 
@@ -123,9 +125,7 @@ impl HDWallet {
                 .await
                 .unwrap(),
             HDWallet::Stellar(seed) => {
-                eth_sweep_token(seed, index, addr, to, provider, Crypto::Stellar)
-                    .await
-                    .unwrap()
+                "unimplemented".to_owned()
             }
         }
     }
@@ -195,16 +195,11 @@ fn tron_address_by_index_hex(seed: &HDSeed, index: i32) -> String {
     );
     extended_pubk_to_addr_tron_hex(&pubk)
 }
-
-#[allow(dead_code)]
-fn stellar_address_by_index(seed: &HDSeed, index: i32) -> String {
+//Add proper version with HD seed for Stellar wallet. But later...
+fn stellar_address_by_index(seed: &str, index: i32) -> String {
     let hd_path_str = format!("m/44'/148'/0'/0/{index}");
-    let seed_m = Seed::new(&seed.mnemonic, "");
-    let (_pk, pubk) = get_extended_keypair(
-        seed_m.as_bytes(),
-        &DerivationPath::from_str(&hd_path_str).unwrap(),
-    );
-    extended_pubk_to_addr_stellar(&pubk)
+    let seed_m = Keypair::from_secret_master_key(&seed, &index.to_string()).unwrap();
+    seed_m.public_key()
 }
 
 fn eth_private_by_index(seed: &HDSeed, index: i32) -> String {
@@ -323,8 +318,7 @@ fn extended_pubk_to_addr_tron_hex(pubk: &ExtendedPubKey) -> String {
     let pubk_bytes = hex::decode(pubk_uncomp).unwrap();
     let k_addr = &keccak_hash(&pubk_bytes);
     //keep last 20 bytes of the result
-    let hex_addr = "0x".to_owned() + &k_addr[24..];
-    hex_addr
+    "0x".to_owned() + &k_addr[24..]
 }
 
 #[allow(dead_code)]
@@ -389,7 +383,7 @@ fn tron_sign(_seed: &HDSeed, _index: i32) -> String {
     "lalala".to_owned()
 }
 
-fn stellar_sign(_seed: &HDSeed, _index: i32) -> String {
+fn stellar_sign(_seed: &str, _index: i32) -> String {
     "lalala".to_owned()
 }
 
@@ -420,6 +414,33 @@ async fn tron_balance(
     Ok(bal)
 }
 
+async fn stellar_balance(
+    seed: &str,
+    index: i32,
+    provider: &str
+    ) -> Result<U256, web3::Error> {
+    Ok(U256::zero())
+}
+
+async fn stellar_balance_token(
+    seed: &str,
+    index: i32,
+    addr: &str,
+    provider: &str
+    ) -> Result<TokenData, web3::Error> {
+    let balance = U256::zero();
+    let balance_f = 0.0;
+    let decimals = 0;
+    let symbol = " ".to_owned();
+    let token_data = TokenData {
+        balance,
+        balance_f,
+        decimals,
+        symbol,
+    };
+    Ok(token_data)
+}
+
 async fn eth_sweep_main(
     seed: &HDSeed,
     index: i32,
@@ -432,11 +453,11 @@ async fn eth_sweep_main(
     let prvk_str = eth_private_by_index(seed, index);
     let prvk = web3::signing::SecretKey::from_str(&prvk_str).unwrap();
     let addr = H160::from_str(&addr_str).unwrap();
-    let to = Address::from_str(&to_str).unwrap();
+    let to = Address::from_str(to_str).unwrap();
     let gas_price = web3.eth().gas_price().await.unwrap();
     let bal = web3.eth().balance(addr, None).await.unwrap();
     let fee = gas_price * 21000 * 5;
-    let val_to_send = bal - &fee;
+    let val_to_send = bal - fee;
     let tx_call_req = CallRequest {
         to: Some(to),
         value: Some(bal),
@@ -473,7 +494,7 @@ async fn eth_balance_token(
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index);
     let addr = H160::from_str(&addr_str).unwrap();
-    let token_address = H160::from_str(&token_addr).unwrap();
+    let token_address = H160::from_str(token_addr).unwrap();
     let contract = Contract::from_json(
         web3.eth(),
         token_address,
@@ -558,7 +579,7 @@ async fn eth_sweep_token(
     let addr = H160::from_str(&addr_str).unwrap();
     let to = Address::from_str(to_str).unwrap();
 
-    let token_address = H160::from_str(&token_addr).unwrap();
+    let token_address = H160::from_str(token_addr).unwrap();
     let contract = Contract::from_json(
         web3.eth(),
         token_address,
@@ -591,11 +612,6 @@ async fn eth_sweep_token(
     Ok("lalala".to_owned())
 }
 
-/*
-fn stellar_balance(_seed: &HDSeed, _index: i32) -> (String, web3::types::U256) {
-    ("".to_owned(), web3::types::U256::zero())
-}
-*/
 
 pub async fn gas_price(provider: &str) -> Result<U256, web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
@@ -631,8 +647,8 @@ pub async fn send_main(
 ) -> Result<H256, web3::Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let prvk = web3::signing::SecretKey::from_str(&prvk_str).unwrap();
-    let to = Address::from_str(&to_str).unwrap();
+    let prvk = web3::signing::SecretKey::from_str(prvk_str).unwrap();
+    let to = Address::from_str(to_str).unwrap();
     let tx_object = TransactionParameters {
         to: Some(to),
         value: val,
@@ -659,9 +675,9 @@ pub fn validate_tron_address(addr: String) -> bool {
                 hasher.update(&bytes);
                 let digest1 = hasher.finalize();
                 let mut hasher = Sha256::new();
-                hasher.update(&digest1);
+                hasher.update(digest1);
                 let digest = hasher.finalize();
-                check == &digest[..4]
+                check == digest[..4]
             }
             Err(_) => false,
         }

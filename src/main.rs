@@ -79,7 +79,7 @@ async fn refill(
         let mut info = tx_info(hash, provider).await.unwrap();
         println!("--------------------");
         println!("{:?}", info);
-        while info.transaction_index == None {
+        while info.transaction_index.is_none() {
             println!("waiting for confirmation...");
             thread::sleep(time::Duration::from_secs(5));
             info = tx_info(hash, provider).await.unwrap();
@@ -96,8 +96,8 @@ async fn refill(
         let mut info = tx_info(hash, provider).await.unwrap();
         println!("--------------------");
         println!("{:?}", info);
-        while info.transaction_index == None {
-            thread::sleep_ms(5000);
+        while info.transaction_index.is_none() {
+            thread::sleep(time::Duration::from_secs(5));
             info = tx_info(hash, provider).await.unwrap();
         }
         println!("---------confirmed-----------");
@@ -105,7 +105,7 @@ async fn refill(
     }
 }
 
-async fn generate_hd_prase() -> () {
+async fn generate_hd_prase() {
     let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
     let phrase = a.into_phrase();
     println!("-----------");

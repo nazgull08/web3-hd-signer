@@ -14,7 +14,7 @@ pub async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
         Crypto::Tron => HDWallet::Tron(HDSeed::new(&phrase)),
         Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&phrase)),
         Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&phrase)),
-        Crypto::Stellar => HDWallet::Stellar(HDSeed::new(&phrase)),
+        Crypto::Stellar => HDWallet::Stellar(conf.stl_master_key),
     };
 
     let tokens = match crypto {
@@ -85,7 +85,7 @@ async fn check_main_balance(
     decimals: U256,
     rate: f64,
 ) -> (U256, f64, f64) {
-    let addr_bal = hdw.balance(id, &provider).await;
+    let addr_bal = hdw.balance(id, provider).await;
     let addr_bal_f = addr_bal / decimals;
     let addr_bal_f_prep = addr_bal_f.as_u128() as f64 * 0.01;
     (addr_bal, addr_bal_f_prep, addr_bal_f_prep / rate)
@@ -99,7 +99,7 @@ async fn check_tokens_balance(
 ) -> Vec<TokenData> {
     let mut tokens_balances: Vec<TokenData> = vec![];
     for token in tokens {
-        let t_data = hdw.balance_token(id as i32, &token, &provider).await;
+        let t_data = hdw.balance_token(id, token, provider).await;
         tokens_balances.push(t_data);
     }
     tokens_balances

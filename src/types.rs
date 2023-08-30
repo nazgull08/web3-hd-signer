@@ -27,6 +27,7 @@ pub struct Settings {
     pub bsc_tokens: Vec<String>,
     pub bsc_safe: String,
     pub bsc_provider: String,
+    pub stl_master_key: String,
     pub stl_tokens: Vec<String>,
     pub stl_safe: String,
     pub stl_provider: String,
