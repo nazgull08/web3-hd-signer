@@ -18,6 +18,8 @@ use web3::contract::{Contract, Options};
 use web3::types::{
     Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256,
 };
+use thiserror::Error;
+use std::sync::Arc;
 
 use crate::types::*;
 
@@ -29,14 +31,15 @@ pub enum HDWallet {
     Tron(HDSeed),
     Stellar(String),
 }
-/* NTD proper errors
-#[derive(Debug, Clone)]
+#[derive(Debug,Error,Clone)]
 pub enum Error {
     #[error("Web3 error: {0}")]
     Web3(#[from] web3::Error),
-    #[error("Hex error: {0}")]
-    Hex(#[from] rustc_hex::FromHexError),
-}*/
+    #[error("Stellar SDK error")]
+    StellarSDKError(Arc<anyhow::Error>),
+    #[error("Stellar parsing error")]
+    StellarParsingFloatError(#[from] std::num::ParseFloatError),
+}
 
 #[derive(Debug, Clone)]
 pub struct HDSeed {
@@ -197,7 +200,6 @@ fn tron_address_by_index_hex(seed: &HDSeed, index: i32) -> String {
 }
 //Add proper version with HD seed for Stellar wallet. But later...
 fn stellar_address_by_index(seed: &str, index: i32) -> String {
-    let hd_path_str = format!("m/44'/148'/0'/0/{index}");
     let seed_m = Keypair::from_secret_master_key(&seed, &index.to_string()).unwrap();
     seed_m.public_key()
 }
@@ -418,28 +420,28 @@ async fn stellar_balance(
     seed: &str,
     index: i32,
     provider: &str
-    ) -> Result<U256, web3::Error> {
+    ) -> Result<U256, Error> { 
+    let server = Server::new(provider.to_owned());
+    let addr = stellar_address_by_index(seed, index);
+    let account = server.load_account(&addr).map_err(|e| Error::StellarSDKError(Arc::new(e)));
+    let mut bal = 0.0;
+    let balances = match account {
+       Ok(acc) => {
+           acc.balances
+       },
+       Err(_) => {
+           vec![]
+       }
+    };
+    for b in balances{
+        if b.asset_type == "native" {
+            bal = b.balance.parse::<f64>()?;
+        }
+    }
+    println!("bal: {:?}",bal);
     Ok(U256::zero())
 }
 
-async fn stellar_balance_token(
-    seed: &str,
-    index: i32,
-    addr: &str,
-    provider: &str
-    ) -> Result<TokenData, web3::Error> {
-    let balance = U256::zero();
-    let balance_f = 0.0;
-    let decimals = 0;
-    let symbol = " ".to_owned();
-    let token_data = TokenData {
-        balance,
-        balance_f,
-        decimals,
-        symbol,
-    };
-    Ok(token_data)
-}
 
 async fn eth_sweep_main(
     seed: &HDSeed,
@@ -554,6 +556,49 @@ async fn tron_balance_token(
     let balance: U256 = result.await.unwrap();
     let balance_calced: U256 = (balance) / (U256::exp10((decimals - 2) as usize));
     let balance_f = (balance_calced.as_u128() as f64) * 0.01;
+    let token_data = TokenData {
+        balance,
+        balance_f,
+        decimals,
+        symbol,
+    };
+    Ok(token_data)
+}
+
+async fn stellar_balance_token(
+    seed: &str,
+    index: i32,
+    addr: &str,
+    provider: &str
+    ) -> Result<TokenData, Error> {
+    let server = Server::new(provider.to_owned());
+    let acc = stellar_address_by_index(seed, index);
+    let ops_resp = server
+        .operations()
+        .for_endpoint(Endpoint::Accounts(acc))
+        .call()
+        .map_err(|e| Error::StellarSDKError(Arc::new(e)))?;
+    let ops = ops_resp._embedded.records;
+    let mut balance = U256::zero();
+    let mut balance_f= 0.0; 
+    let decimals = 8;
+    let mut symbol = " ".to_owned();
+    for o in ops {
+        let o_asset = o.asset;
+        match o_asset {
+            None => {},
+            Some(asset) => {
+                if asset == addr {
+                    symbol = (asset.split(":").next()).unwrap_or(" ").to_owned();
+                    balance_f = match o.amount.clone() {
+                        None => 0.,
+                        Some(a) => a.parse()?,
+                    };
+                    balance = U256::from((balance_f*1_000_000_00.0) as u128);
+                }
+            }
+        }
+    }
     let token_data = TokenData {
         balance,
         balance_f,

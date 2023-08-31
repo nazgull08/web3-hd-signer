@@ -55,9 +55,7 @@ pub async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
             check_main_balance(&hdw, i as i32, &provider, decimals, rate).await;
         let tokens_bal = check_tokens_balance(&hdw, i as i32, &provider, &tokens).await;
         println!("tokens_bal: {:?}", tokens_bal);
-        let g_price = gas_price(&provider).await.unwrap();
-        let tx_fee: U256 = g_price * 21000 * 5;
-        let tx_fee_prep = (tx_fee / decimals).as_u128() as f64 * 0.01;
+        let (tx_fee,tx_fee_prep) = check_fee(&hdw, &provider, decimals).await;
         for t in tokens_bal {
             if t.balance > U256::zero() {
                 println!("Found {:.4} {:?}", t.balance_f, t.symbol);
@@ -74,6 +72,22 @@ pub async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
                 "Funds < fee: {:.12} < {:.12}. Skipping.",
                 m_bal, tx_fee_prep
             );
+        }
+    }
+}
+
+async fn check_fee(
+    hdw: &HDWallet,
+    provider: &str,
+    decimals: U256
+    ) -> (U256,f64) {
+    match hdw {
+        HDWallet::Stellar(_) => {(U256::zero(),0.0)},
+        _ => {
+            let g_price = gas_price(&provider).await.unwrap();
+            let tx_fee: U256 = g_price * 21000 * 5;
+            let tx_fee_prep = (tx_fee / decimals).as_u128() as f64 * 0.01;
+            (tx_fee,tx_fee_prep)
         }
     }
 }
