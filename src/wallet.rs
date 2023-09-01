@@ -18,7 +18,6 @@ use web3::contract::{Contract, Options};
 use web3::types::{
     Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256,
 };
-use thiserror::Error;
 use std::sync::Arc;
 
 use crate::types::*;
@@ -30,15 +29,6 @@ pub enum HDWallet {
     Ethereum(HDSeed),
     Tron(HDSeed),
     Stellar(String),
-}
-#[derive(Debug,Error,Clone)]
-pub enum Error {
-    #[error("Web3 error: {0}")]
-    Web3(#[from] web3::Error),
-    #[error("Stellar SDK error")]
-    StellarSDKError(Arc<anyhow::Error>),
-    #[error("Stellar parsing error")]
-    StellarParsingFloatError(#[from] std::num::ParseFloatError),
 }
 
 #[derive(Debug, Clone)]

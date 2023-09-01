@@ -2,6 +2,19 @@ use serde_derive::Deserialize;
 use web3::types::U256;
 
 use clap::{Parser, Subcommand, ValueEnum};
+use thiserror::Error;
+use std::sync::Arc;
+
+
+#[derive(Debug,Error,Clone)]
+pub enum Error {
+    #[error("Web3 error: {0}")]
+    Web3(#[from] web3::Error),
+    #[error("Stellar SDK error")]
+    StellarSDKError(Arc<anyhow::Error>),
+    #[error("Stellar parsing error")]
+    StellarParsingFloatError(#[from] std::num::ParseFloatError),
+}
 
 #[derive(Debug, Clone)]
 pub struct WalletAddress {

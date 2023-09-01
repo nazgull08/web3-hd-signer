@@ -5,7 +5,7 @@ use crate::{
     wallet::{gas_price, HDSeed, HDWallet},
 };
 
-pub async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
+pub async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) -> Result<Vec<BalanceState>,Error> {
     println!("Calcing balances...");
     let rates = rates().await;
     let phrase = conf.hd_phrase;
@@ -73,7 +73,8 @@ pub async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) {
                 m_bal, tx_fee_prep
             );
         }
-    }
+    };
+    Ok(vec![])
 }
 
 async fn check_fee(
