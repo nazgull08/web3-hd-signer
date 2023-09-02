@@ -37,9 +37,9 @@ pub struct HDSeed {
 }
 
 impl HDSeed {
-    pub fn new(phrase: &str) -> Self {
-        let mnemonic = Mnemonic::from_phrase(phrase, Language::English).unwrap();
-        HDSeed { mnemonic }
+    pub fn new(phrase: &str) -> Result<Self,Error> {
+        let mnemonic = Mnemonic::from_phrase(phrase, Language::English).map_err(|e| Error::MnemonicError(phrase.to_owned()))?;
+        Ok(HDSeed { mnemonic })
     }
 }
 
@@ -317,7 +317,7 @@ fn extended_pubk_to_addr_stellar(pubk: &ExtendedPubKey) -> Result<String, Error>
     let val1 = digest(s_hex_val0);
     let check_sum_val1 = &val1[0..8];
     let final_addr = experimental_addr + check_sum_val1;
-    let final_addr_bytes = hex::decode(final_addr).unwrap();
+    let final_addr_bytes = hex::decode(final_addr)?;
 
     Ok(base58::encode(&final_addr_bytes))
 }
@@ -384,7 +384,7 @@ async fn tron_balance(
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = tron_address_by_index_hex(seed, index)?;
-    let addr = H160::from_str(&addr_str).unwrap();
+    let addr = H160::from_str(&addr_str)?;
     let bal = web3.eth().balance(addr, None).await?;
     Ok(bal)
 }
@@ -470,14 +470,13 @@ async fn eth_balance_token(
         token_address,
         include_bytes!("../res/erc20.abi.json"),
     )?;
-    let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
+    let balance= contract.query("balanceOf", (addr,), None, Options::default(), None).await?;
     let decimals: u8 = contract
         .query("decimals", (), None, Options::default(), None)
         .await?;
     let symbol: String = contract
         .query("symbol", (), None, Options::default(), None)
         .await?;
-    let balance = result.await.unwrap();
     let balance_calced: U256 = (balance) / (U256::exp10((decimals - 2) as usize));
     let balance_f = (balance_calced.as_u128() as f64) * 0.01;
     let token_data = TokenData {
@@ -652,7 +651,7 @@ pub async fn send_main(
 ) -> Result<H256, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let prvk = web3::signing::SecretKey::from_str(prvk_str).unwrap();
+    let prvk = web3::signing::SecretKey::from_str(prvk_str)?;
     let to = Address::from_str(to_str)?;
     let tx_object = TransactionParameters {
         to: Some(to),

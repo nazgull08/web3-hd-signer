@@ -28,15 +28,13 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(),Error>{
     let args = Cli::parse();
 
     let conf = Config::builder()
         .add_source(config::File::with_name("config.toml"))
-        .build()
-        .unwrap()
-        .try_deserialize::<Settings>()
-        .unwrap();
+        .build()?
+        .try_deserialize::<Settings>()?;
     let crypto = args.crypto;
     match args.command {
         Commands::Balance {
@@ -47,7 +45,7 @@ async fn main() {
                 (Some(cfrom), Some(cto)) => (cto, cfrom),
                 _ => (0, 10),
             };
-            balance(conf, c_from, c_to, crypto).await;
+            balance(conf, c_from, c_to, crypto).await?;
         }
         Commands::Refill => {
             println!("Implement refill...");
@@ -58,7 +56,8 @@ async fn main() {
         Commands::GenPhrase => {
             generate_hd_prase().await;
         }
-    }
+    };
+    Ok(())
 }
 
 async fn refill(
@@ -66,41 +65,40 @@ async fn refill(
     main_addrs: Vec<WalletAddress>,
     token_addrs: Vec<WalletAddress>,
     conf: Settings,
-) {
+) -> Result<(),Error>{
     let provider = &conf.eth_provider;
     for m_a in main_addrs {
-        let g_price = gas_price(provider).await.unwrap();
+        let g_price = gas_price(provider).await?;
         let val = g_price * 21000;
         let hash = send_main(sweeper_prvk, &m_a.address, val, provider)
-            .await
-            .unwrap();
-        let mut info = tx_info(hash, provider).await.unwrap();
+            .await?;
+        let mut info = tx_info(hash, provider).await?;
         println!("--------------------");
         println!("{:?}", info);
         while info.transaction_index.is_none() {
             println!("waiting for confirmation...");
             thread::sleep(time::Duration::from_secs(5));
-            info = tx_info(hash, provider).await.unwrap();
+            info = tx_info(hash, provider).await?;
         }
         println!("---------confirmed-----------");
         println!("{:?}", info)
     }
     for m_a in token_addrs {
-        let g_price = gas_price(provider).await.unwrap();
+        let g_price = gas_price(provider).await?;
         let val = g_price * 2 * 65000;
         let hash = send_main(sweeper_prvk, &m_a.address, val, provider)
-            .await
-            .unwrap();
-        let mut info = tx_info(hash, provider).await.unwrap();
+            .await?;
+        let mut info = tx_info(hash, provider).await?;
         println!("--------------------");
         println!("{:?}", info);
         while info.transaction_index.is_none() {
             thread::sleep(time::Duration::from_secs(5));
-            info = tx_info(hash, provider).await.unwrap();
+            info = tx_info(hash, provider).await?;
         }
         println!("---------confirmed-----------");
         println!("{:?}", info)
-    }
+    };
+    Ok(())
 }
 
 async fn generate_hd_prase() {

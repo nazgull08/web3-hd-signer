@@ -33,6 +33,11 @@ pub enum Error {
     HexError(#[from] hex::FromHexError),
     #[error("EthAddr is {0} instead of 42 chars long")]
     EthAddrLengthError(usize),
+    #[error("Config error")]
+    ConfigError(#[from] config::ConfigError),
+    #[error("Mnemonic error")]
+    MnemonicError(String),
+
 }
 
 #[derive(Debug, Clone)]
