@@ -5,10 +5,16 @@ use crate::{
     wallet::{gas_price, HDSeed, HDWallet},
 };
 
-pub async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) -> Result<Vec<BalanceState>,Error> {
+pub async fn balance(
+    conf: Settings,
+    c_from: u32,
+    c_to: u32,
+    crypto: Crypto,
+) -> Result<Vec<BalanceState>, Error> {
     println!("Calcing balances...");
-    let rates = rates().await;
+    let rates = rates().await?;
     let phrase = conf.hd_phrase;
+
     let hdw = match crypto {
         Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&phrase)),
         Crypto::Tron => HDWallet::Tron(HDSeed::new(&phrase)),
@@ -49,13 +55,13 @@ pub async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) -> 
 
     for i in c_from..c_to {
         println!("---------");
-        let addr_i = hdw.address(i as i32);
+        let addr_i = hdw.address(i as i32)?;
         println!("i: = {:?}, addr: {addr_i}", i);
         let (m_bal, m_bal_f, m_bal_usd) =
-            check_main_balance(&hdw, i as i32, &provider, decimals, rate).await;
-        let tokens_bal = check_tokens_balance(&hdw, i as i32, &provider, &tokens).await;
+            check_main_balance(&hdw, i as i32, &provider, decimals, rate).await?;
+        let tokens_bal = check_tokens_balance(&hdw, i as i32, &provider, &tokens).await?;
         println!("tokens_bal: {:?}", tokens_bal);
-        let (tx_fee,tx_fee_prep) = check_fee(&hdw, &provider, decimals).await;
+        let (tx_fee, tx_fee_prep) = check_fee(&hdw, &provider, decimals).await?;
         for t in tokens_bal {
             if t.balance > U256::zero() {
                 println!("Found {:.4} {:?}", t.balance_f, t.symbol);
@@ -73,22 +79,18 @@ pub async fn balance(conf: Settings, c_from: u32, c_to: u32, crypto: Crypto) -> 
                 m_bal, tx_fee_prep
             );
         }
-    };
+    }
     Ok(vec![])
 }
 
-async fn check_fee(
-    hdw: &HDWallet,
-    provider: &str,
-    decimals: U256
-    ) -> (U256,f64) {
+async fn check_fee(hdw: &HDWallet, provider: &str, decimals: U256) -> Result<(U256, f64), Error> {
     match hdw {
-        HDWallet::Stellar(_) => {(U256::zero(),0.0)},
+        HDWallet::Stellar(_) => Ok((U256::zero(), 0.0)),
         _ => {
-            let g_price = gas_price(&provider).await.unwrap();
+            let g_price = gas_price(&provider).await?;
             let tx_fee: U256 = g_price * 21000 * 5;
             let tx_fee_prep = (tx_fee / decimals).as_u128() as f64 * 0.01;
-            (tx_fee,tx_fee_prep)
+            Ok((tx_fee, tx_fee_prep))
         }
     }
 }
@@ -99,11 +101,11 @@ async fn check_main_balance(
     provider: &str,
     decimals: U256,
     rate: f64,
-) -> (U256, f64, f64) {
-    let addr_bal = hdw.balance(id, provider).await;
+) -> Result<(U256, f64, f64), Error> {
+    let addr_bal = hdw.balance(id, provider).await?;
     let addr_bal_f = addr_bal / decimals;
     let addr_bal_f_prep = addr_bal_f.as_u128() as f64 * 0.01;
-    (addr_bal, addr_bal_f_prep, addr_bal_f_prep / rate)
+    Ok((addr_bal, addr_bal_f_prep, addr_bal_f_prep / rate))
 }
 
 async fn check_tokens_balance(
@@ -111,25 +113,23 @@ async fn check_tokens_balance(
     id: i32,
     provider: &str,
     tokens: &Vec<String>,
-) -> Vec<TokenData> {
+) -> Result<Vec<TokenData>, Error> {
     let mut tokens_balances: Vec<TokenData> = vec![];
     for token in tokens {
-        let t_data = hdw.balance_token(id, token, provider).await;
+        let t_data = hdw.balance_token(id, token, provider).await?;
         tokens_balances.push(t_data);
     }
-    tokens_balances
+    Ok(tokens_balances)
 }
 
-pub async fn rates() -> Rates {
+pub async fn rates() -> Result<Rates, Error> {
     println!("getting current rates...");
     let rs: RatesRaw = reqwest::get(
         "https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=ETH,TRX,MATIC,BNB,XLM",
     )
-    .await
-    .unwrap()
+    .await?
     .json::<RatesRaw>()
-    .await
-    .unwrap();
+    .await?;
     let rates: Rates = Rates {
         eth: 1. / rs.ETH,
         trx: 1. / rs.TRX,
@@ -141,5 +141,5 @@ pub async fn rates() -> Rates {
         "Rates:\nETH:{:.4}$\nTRX:{:.4}$\nMTC:{:.4}$\nBNB:{:.4}$\nXLM:{:.4}$\n",
         rates.eth, rates.trx, rates.mtc, rates.bnb, rates.xlm
     );
-    rates
+    Ok(rates)
 }

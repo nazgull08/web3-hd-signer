@@ -25,6 +25,7 @@ eth_checksum = "0.1.2"
 hex = "0.4.3"
 log = "^0.4.19"
 reqwest = "^0.11.18"
+rustc-hex = "^2.1.0"
 secp256k1 = "0.27.0"
 serde = { version = "1.0.163", features = ["derive"] }
 serde_derive = "1.0.8"

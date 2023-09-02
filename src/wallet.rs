@@ -14,11 +14,11 @@ use secp256k1::Secp256k1;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use sha3::{Digest, Keccak256};
+use std::sync::Arc;
 use web3::contract::{Contract, Options};
 use web3::types::{
     Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256,
 };
-use std::sync::Arc;
 
 use crate::types::*;
 
@@ -45,7 +45,7 @@ impl HDSeed {
 
 //NTD add funcion for save key to file
 impl HDWallet {
-    pub fn address(&self, index: i32) -> String {
+    pub fn address(&self, index: i32) -> Result<String, Error> {
         match self {
             HDWallet::Ethereum(seed) => eth_address_by_index(seed, index),
             HDWallet::Tron(seed) => tron_address_by_index(seed, index),
@@ -53,7 +53,7 @@ impl HDWallet {
         }
     }
 
-    pub fn private(&self, index: i32) -> String {
+    pub fn private(&self, index: i32) -> Result<String, Error> {
         match self {
             HDWallet::Ethereum(seed) => eth_private_by_index(seed, index),
             HDWallet::Tron(seed) => tron_private_by_index(seed, index),
@@ -61,7 +61,7 @@ impl HDWallet {
         }
     }
 
-    pub fn public(&self, index: i32) -> String {
+    pub fn public(&self, index: i32) -> Result<String, Error> {
         match self {
             HDWallet::Ethereum(seed) => eth_public_by_index(seed, index),
             HDWallet::Tron(seed) => tron_public_by_index(seed, index),
@@ -69,7 +69,7 @@ impl HDWallet {
         }
     }
 
-    pub fn sign(&self, index: i32) -> String {
+    pub fn sign(&self, index: i32) -> Result<String, Error> {
         match self {
             HDWallet::Ethereum(seed) => eth_sign(seed, index),
             HDWallet::Tron(seed) => tron_sign(seed, index),
@@ -77,49 +77,52 @@ impl HDWallet {
         }
     }
 
-    pub async fn balance(&self, index: i32, provider: &str) -> web3::types::U256 {
+    pub async fn balance(&self, index: i32, provider: &str) -> Result<U256, Error> {
         match self {
-            HDWallet::Ethereum(seed) => eth_balance(seed, index, provider).await.unwrap(),
-            HDWallet::Tron(seed) => tron_balance(seed, index, provider).await.unwrap(),
-            HDWallet::Stellar(master_key) => stellar_balance(master_key, index,provider).await.unwrap(),
+            HDWallet::Ethereum(seed) => eth_balance(seed, index, provider).await,
+            HDWallet::Tron(seed) => tron_balance(seed, index, provider).await,
+            HDWallet::Stellar(master_key) => stellar_balance(master_key, index, provider).await,
         }
     }
 
-    pub async fn balance_token(&self, index: i32, addr: &str, provider: &str) -> TokenData {
+    pub async fn balance_token(
+        &self,
+        index: i32,
+        addr: &str,
+        provider: &str,
+    ) -> Result<TokenData, Error> {
         match self {
-            HDWallet::Ethereum(seed) => eth_balance_token(seed, index, addr, provider)
-                .await
-                .unwrap(),
-            HDWallet::Tron(seed) => tron_balance_token(seed, index, addr, provider)
-                .await
-                .unwrap(), //NTD total rework
-            HDWallet::Stellar(master_key) => stellar_balance_token(master_key, index, addr, provider)
-                .await
-                .unwrap(),
+            HDWallet::Ethereum(seed) => eth_balance_token(seed, index, addr, provider).await,
+            HDWallet::Tron(seed) => tron_balance_token(seed, index, addr, provider).await,
+            HDWallet::Stellar(master_key) => {
+                stellar_balance_token(master_key, index, addr, provider).await
+            }
         }
     }
 
-    pub async fn sweep(&self, index: i32, to: &str, provider: &str) -> String {
+    pub async fn sweep(&self, index: i32, to: &str, provider: &str) -> Result<String, Error> {
         match self {
-            HDWallet::Ethereum(seed) => eth_sweep_main(seed, index, to, provider).await.unwrap(),
-            HDWallet::Tron(seed) => eth_sweep_main(seed, index, to, provider).await.unwrap(), //NTD total rework
-            HDWallet::Stellar(master_key) => "unimplemented".to_owned(),
+            HDWallet::Ethereum(seed) => eth_sweep_main(seed, index, to, provider).await,
+            HDWallet::Tron(seed) => eth_sweep_main(seed, index, to, provider).await,
+            HDWallet::Stellar(master_key) => Ok("unimplemented".to_owned()),
         }
     }
 
-    pub async fn sweep_token(&self, index: i32, addr: &str, to: &str, provider: &str) -> String {
+    pub async fn sweep_token(
+        &self,
+        index: i32,
+        addr: &str,
+        to: &str,
+        provider: &str,
+    ) -> Result<String, Error> {
         match self {
             HDWallet::Ethereum(seed) => {
-                eth_sweep_token(seed, index, addr, to, provider, Crypto::Eth)
-                    .await
-                    .unwrap()
+                eth_sweep_token(seed, index, addr, to, provider, Crypto::Eth).await
             }
-            HDWallet::Tron(seed) => eth_sweep_token(seed, index, addr, to, provider, Crypto::Tron)
-                .await
-                .unwrap(),
-            HDWallet::Stellar(seed) => {
-                "unimplemented".to_owned()
+            HDWallet::Tron(seed) => {
+                eth_sweep_token(seed, index, addr, to, provider, Crypto::Tron).await
             }
+            HDWallet::Stellar(seed) => Ok("unimplemented".to_owned()),
         }
     }
 }
@@ -128,214 +131,195 @@ impl HDWallet {
 pub struct EthAddr(String);
 
 impl EthAddr {
-    pub fn new(addr: &str) -> Self {
+    pub fn new(addr: &str) -> Result<Self, Error> {
         let mut proper_addr = addr.to_owned();
         //check for 0x prefix
         if !addr.starts_with("0x") {
             proper_addr = format!("0x{}", addr);
         }
         //check that passed str is a hex string
-        hex::decode(&proper_addr[2..])
-            .map_err(|e| {
-                println!("String passed into EthAddr is not hex.");
-                e
-            })
-            .unwrap();
+        hex::decode(&proper_addr[2..]).map_err(|e| {
+            println!("String passed into EthAddr is not hex.");
+            e
+        })?;
         //check length
         if proper_addr.len() != 42 {
-            panic!(
-                "String passed into EthAddr is {} hex chars long instead of 42.",
-                proper_addr.len()
-            );
+            return Err(Error::EthAddrLengthError(proper_addr.len()));
         }
         //checksum and return
         let checksummed_addr = eth_checksum::checksum(&proper_addr);
-        Self(checksummed_addr)
+        Ok(Self(checksummed_addr))
     }
     pub fn get(&self) -> &str {
         &self.0
     }
 }
 
-fn eth_address_by_index(seed: &HDSeed, index: i32) -> String {
+fn eth_address_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
     let hd_path_str = format!("m/44'/60'/0'/0/{index}");
     let seed_m = Seed::new(&seed.mnemonic, "");
-    let (_pk, pubk) = get_extended_keypair(
-        seed_m.as_bytes(),
-        &DerivationPath::from_str(&hd_path_str).unwrap(),
-    );
-    let eth_addr = extended_pubk_to_addr(&pubk);
+    let (_pk, pubk) =
+        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
+    let eth_addr = extended_pubk_to_addr(&pubk)?;
 
-    eth_addr.get().to_owned()
+    Ok(eth_addr.get().to_owned())
 }
 
-fn tron_address_by_index(seed: &HDSeed, index: i32) -> String {
+fn tron_address_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
     let hd_path_str = format!("m/44'/195'/0'/0/{index}");
     let seed_m = Seed::new(&seed.mnemonic, "");
-    let (_pk, pubk) = get_extended_keypair(
-        seed_m.as_bytes(),
-        &DerivationPath::from_str(&hd_path_str).unwrap(),
-    );
-    extended_pubk_to_addr_tron(&pubk)
+    let (_pk, pubk) =
+        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
+    Ok(extended_pubk_to_addr_tron(&pubk)?)
 }
 
-fn tron_address_by_index_hex(seed: &HDSeed, index: i32) -> String {
+fn tron_address_by_index_hex(seed: &HDSeed, index: i32) -> Result<String, Error> {
     let hd_path_str = format!("m/44'/195'/0'/0/{index}");
     let seed_m = Seed::new(&seed.mnemonic, "");
-    let (_pk, pubk) = get_extended_keypair(
-        seed_m.as_bytes(),
-        &DerivationPath::from_str(&hd_path_str).unwrap(),
-    );
-    extended_pubk_to_addr_tron_hex(&pubk)
+    let (_pk, pubk) =
+        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
+    Ok(extended_pubk_to_addr_tron_hex(&pubk)?)
 }
 //Add proper version with HD seed for Stellar wallet. But later...
-fn stellar_address_by_index(seed: &str, index: i32) -> String {
-    let seed_m = Keypair::from_secret_master_key(&seed, &index.to_string()).unwrap();
-    seed_m.public_key()
+fn stellar_address_by_index(seed: &str, index: i32) -> Result<String, Error> {
+    let seed_m = Keypair::from_secret_master_key(&seed, &index.to_string())
+        .map_err(|e| Error::StellarSDKError(Arc::new(e)))?;
+    Ok(seed_m.public_key())
 }
 
-fn eth_private_by_index(seed: &HDSeed, index: i32) -> String {
+fn eth_private_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
     let hd_path_str = format!("m/44'/60'/0'/0/{index}");
     let seed_m = Seed::new(&seed.mnemonic, "");
-    let (pk, _) = get_extended_keypair(
-        seed_m.as_bytes(),
-        &DerivationPath::from_str(&hd_path_str).unwrap(),
-    );
-    pk.private_key.display_secret().to_string()
+    let (pk, _) =
+        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
+    Ok(pk.private_key.display_secret().to_string())
 }
 
-fn tron_private_by_index(seed: &HDSeed, index: i32) -> String {
+fn tron_private_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
     let hd_path_str = format!("m/44'/195'/0'/0/{index}");
     let seed_m = Seed::new(&seed.mnemonic, "");
-    let (pk, _) = get_extended_keypair(
-        seed_m.as_bytes(),
-        &DerivationPath::from_str(&hd_path_str).unwrap(),
-    );
-    pk.private_key.display_secret().to_string()
+    let (pk, _) =
+        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
+    Ok(pk.private_key.display_secret().to_string())
 }
 
-fn eth_public_by_index(seed: &HDSeed, index: i32) -> String {
+fn eth_public_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
     let hd_path_str = format!("m/44'/60'/0'/0/{index}");
     let seed_m = Seed::new(&seed.mnemonic, "");
-    let (_, pubk) = get_extended_keypair(
-        seed_m.as_bytes(),
-        &DerivationPath::from_str(&hd_path_str).unwrap(),
-    );
-    pubk.public_key.to_string()
+    let (_, pubk) =
+        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
+    Ok(pubk.public_key.to_string())
 }
 
-fn tron_public_by_index(seed: &HDSeed, index: i32) -> String {
+fn tron_public_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
     let hd_path_str = format!("m/44'/195'/0'/0/{index}");
     let seed_m = Seed::new(&seed.mnemonic, "");
-    let (_, pubk) = get_extended_keypair(
-        seed_m.as_bytes(),
-        &DerivationPath::from_str(&hd_path_str).unwrap(),
-    );
-    pubk.public_key.to_string()
+    let (_, pubk) =
+        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
+    Ok(pubk.public_key.to_string())
 }
 
 fn get_extended_keypair(
     seed: &[u8],
     hd_path: &DerivationPath,
-) -> (ExtendedPrivKey, ExtendedPubKey) {
+) -> Result<(ExtendedPrivKey, ExtendedPubKey), Error> {
     let secp = Secp256k1::new();
     let pk = ExtendedPrivKey::new_master(Network::Bitcoin, seed)
         // we convert HD Path to bitcoin lib format (DerivationPath)
-        .and_then(|k| k.derive_priv(&secp, hd_path))
-        .unwrap();
+        .and_then(|k| k.derive_priv(&secp, hd_path))?;
     let pubk = ExtendedPubKey::from_priv(&secp, &pk);
-    (pk, pubk)
+    Ok((pk, pubk))
 }
 
-fn extended_pubk_to_addr(pubk: &ExtendedPubKey) -> EthAddr {
+fn extended_pubk_to_addr(pubk: &ExtendedPubKey) -> Result<EthAddr, Error> {
     //massage into the right format
     let pubk_str = pubk.public_key.to_string();
-    let pubk_secp = secp256k1::PublicKey::from_str(&pubk_str).unwrap();
+    let pubk_secp = secp256k1::PublicKey::from_str(&pubk_str)?;
     //format as uncompressed key, remove "04" in the beginning
     let pubk_uncomp = &PublicKey::new_uncompressed(pubk_secp).to_string()[2..];
     //decode from hex and pass to keccak for hashing
-    let pubk_bytes = hex::decode(pubk_uncomp).unwrap();
+    let pubk_bytes = hex::decode(pubk_uncomp)?;
     let addr = &keccak_hash(&pubk_bytes);
     //keep last 20 bytes of the result
     let addr = &addr[(addr.len() - 40)..];
     //massage into domain unit
-    EthAddr::new(addr)
+    Ok(EthAddr::new(addr)?)
 }
 
-pub fn partial_address_to_addr_tron(partial_address: &str) -> String {
-    let hex_exp_addr = hex::decode(partial_address).unwrap();
+pub fn partial_address_to_addr_tron(partial_address: &str) -> Result<String, Error> {
+    let hex_exp_addr = hex::decode(partial_address)?;
     let s_hex_exp_addr = hex_exp_addr.as_slice();
     let val0 = digest(s_hex_exp_addr);
-    let hex_val0 = hex::decode(val0).unwrap();
+    let hex_val0 = hex::decode(val0)?;
     let s_hex_val0 = hex_val0.as_slice();
     let val1 = digest(s_hex_val0);
     let check_sum_val1 = &val1[0..8];
     let final_addr = partial_address.to_owned() + check_sum_val1;
-    let final_addr_bytes = hex::decode(final_addr).unwrap();
+    let final_addr_bytes = hex::decode(final_addr)?;
 
-    base58::encode(&final_addr_bytes)
+    Ok(base58::encode(&final_addr_bytes))
 }
 
-fn extended_pubk_to_addr_tron(pubk: &ExtendedPubKey) -> String {
+fn extended_pubk_to_addr_tron(pubk: &ExtendedPubKey) -> Result<String, Error> {
     //massage into the right format
     let pubk_str = pubk.public_key.to_string();
-    let pubk_secp = secp256k1::PublicKey::from_str(&pubk_str).unwrap();
+    let pubk_secp = secp256k1::PublicKey::from_str(&pubk_str)?;
     //format as uncompressed key, remove "04" in the beginning
     let pubk_uncomp = &PublicKey::new_uncompressed(pubk_secp).to_string()[2..];
     //decode from hex and pass to keccak for hashing
-    let pubk_bytes = hex::decode(pubk_uncomp).unwrap();
+    let pubk_bytes = hex::decode(pubk_uncomp)?;
     let k_addr = &keccak_hash(&pubk_bytes);
     //keep last 20 bytes of the result
     let experimental_addr = "41".to_owned() + &k_addr[24..];
-    let hex_exp_addr = hex::decode(&experimental_addr).unwrap();
+    let hex_exp_addr = hex::decode(&experimental_addr)?;
     let s_hex_exp_addr = hex_exp_addr.as_slice();
     let val0 = digest(s_hex_exp_addr);
-    let hex_val0 = hex::decode(val0).unwrap();
+    let hex_val0 = hex::decode(val0)?;
     let s_hex_val0 = hex_val0.as_slice();
     let val1 = digest(s_hex_val0);
     let check_sum_val1 = &val1[0..8];
     let final_addr = experimental_addr + check_sum_val1;
-    let final_addr_bytes = hex::decode(final_addr).unwrap();
+    let final_addr_bytes = hex::decode(final_addr)?;
 
-    base58::encode(&final_addr_bytes)
+    Ok(base58::encode(&final_addr_bytes))
 }
 
-fn extended_pubk_to_addr_tron_hex(pubk: &ExtendedPubKey) -> String {
+fn extended_pubk_to_addr_tron_hex(pubk: &ExtendedPubKey) -> Result<String, Error> {
     //massage into the right format
     let pubk_str = pubk.public_key.to_string();
-    let pubk_secp = secp256k1::PublicKey::from_str(&pubk_str).unwrap();
+    let pubk_secp = secp256k1::PublicKey::from_str(&pubk_str)?;
     //format as uncompressed key, remove "04" in the beginning
     let pubk_uncomp = &PublicKey::new_uncompressed(pubk_secp).to_string()[2..];
     //decode from hex and pass to keccak for hashing
-    let pubk_bytes = hex::decode(pubk_uncomp).unwrap();
+    let pubk_bytes = hex::decode(pubk_uncomp)?;
     let k_addr = &keccak_hash(&pubk_bytes);
     //keep last 20 bytes of the result
-    "0x".to_owned() + &k_addr[24..]
+    Ok("0x".to_owned() + &k_addr[24..])
 }
 
 #[allow(dead_code)]
-fn extended_pubk_to_addr_stellar(pubk: &ExtendedPubKey) -> String {
+fn extended_pubk_to_addr_stellar(pubk: &ExtendedPubKey) -> Result<String, Error> {
     //massage into the right format
     let pubk_str = pubk.public_key.to_string();
-    let pubk_secp = secp256k1::PublicKey::from_str(&pubk_str).unwrap();
+    let pubk_secp = secp256k1::PublicKey::from_str(&pubk_str)?;
     //format as uncompressed key, remove "04" in the beginning
     let pubk_uncomp = &PublicKey::new_uncompressed(pubk_secp).to_string()[2..];
     //decode from hex and pass to keccak for hashing
-    let pubk_bytes = hex::decode(pubk_uncomp).unwrap();
+    let pubk_bytes = hex::decode(pubk_uncomp)?;
     let k_addr = &keccak_hash(&pubk_bytes);
     //keep last 20 bytes of the result
     let experimental_addr = "41".to_owned() + &k_addr[24..];
-    let hex_exp_addr = hex::decode(&experimental_addr).unwrap();
+    let hex_exp_addr = hex::decode(&experimental_addr)?;
     let s_hex_exp_addr = hex_exp_addr.as_slice();
     let val0 = digest(s_hex_exp_addr);
-    let hex_val0 = hex::decode(val0).unwrap();
+    let hex_val0 = hex::decode(val0)?;
     let s_hex_val0 = hex_val0.as_slice();
     let val1 = digest(s_hex_val0);
     let check_sum_val1 = &val1[0..8];
     let final_addr = experimental_addr + check_sum_val1;
     let final_addr_bytes = hex::decode(final_addr).unwrap();
 
-    base58::encode(&final_addr_bytes)
+    Ok(base58::encode(&final_addr_bytes))
 }
 
 fn keccak_hash<T>(data: &T) -> String
@@ -349,47 +333,46 @@ where
 }
 
 #[allow(dead_code)]
-fn get_private(seed: &[u8], hd_path: &DerivationPath) -> (ExtendedPrivKey, ExtendedPubKey) {
+fn get_private(
+    seed: &[u8],
+    hd_path: &DerivationPath,
+) -> Result<(ExtendedPrivKey, ExtendedPubKey), Error> {
     let secp = Secp256k1::new();
     let pk = ExtendedPrivKey::new_master(Network::Bitcoin, seed)
-        .and_then(|k| k.derive_priv(&secp, hd_path))
-        .unwrap();
+        .and_then(|k| k.derive_priv(&secp, hd_path))?;
     let pubk = ExtendedPubKey::from_priv(&secp, &pk);
-    (pk, pubk)
+    Ok((pk, pubk))
 }
 
-fn eth_sign(seed: &HDSeed, index: i32) -> String {
+fn eth_sign(seed: &HDSeed, index: i32) -> Result<String, Error> {
     let hd_path_str = format!("m/44'/60'/0'/0/{index}");
     // let transport = web3::transports::Http::new("https://rinkeby.infura.io/v3/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")?;
     //let web3 = web3::Web3::new(transport);
     // let to = Address::from_str("0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX").unwrap();
     let seed_m = Seed::new(&seed.mnemonic, "");
-    let (_privkey, pubk) = get_extended_keypair(
-        seed_m.as_bytes(),
-        &DerivationPath::from_str(&hd_path_str).unwrap(),
-    );
-    pubk.public_key.to_string()
+    let (_privkey, pubk) =
+        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
+    Ok(pubk.public_key.to_string())
 }
 
-fn tron_sign(_seed: &HDSeed, _index: i32) -> String {
-    "lalala".to_owned()
+fn tron_sign(_seed: &HDSeed, _index: i32) -> Result<String, Error> {
+    Ok("lalala".to_owned())
 }
 
-fn stellar_sign(_seed: &str, _index: i32) -> String {
-    "lalala".to_owned()
+fn stellar_sign(_seed: &str, _index: i32) -> Result<String, Error> {
+    Ok("lalala".to_owned())
 }
-
 
 async fn eth_balance(
     seed: &HDSeed,
     index: i32,
     provider: &str,
-) -> Result<web3::types::U256, web3::Error> {
+) -> Result<web3::types::U256, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let addr_str = eth_address_by_index(seed, index);
-    let addr = H160::from_str(&addr_str).unwrap();
-    let bal = web3.eth().balance(addr, None).await.unwrap();
+    let addr_str = eth_address_by_index(seed, index)?;
+    let addr = H160::from_str(&addr_str)?;
+    let bal = web3.eth().balance(addr, None).await?;
     Ok(bal)
 }
 
@@ -397,57 +380,52 @@ async fn tron_balance(
     seed: &HDSeed,
     index: i32,
     provider: &str,
-) -> Result<web3::types::U256, web3::Error> {
+) -> Result<web3::types::U256, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let addr_str = tron_address_by_index_hex(seed, index);
+    let addr_str = tron_address_by_index_hex(seed, index)?;
     let addr = H160::from_str(&addr_str).unwrap();
-    let bal = web3.eth().balance(addr, None).await.unwrap();
+    let bal = web3.eth().balance(addr, None).await?;
     Ok(bal)
 }
 
-async fn stellar_balance(
-    seed: &str,
-    index: i32,
-    provider: &str
-    ) -> Result<U256, Error> { 
+async fn stellar_balance(seed: &str, index: i32, provider: &str) -> Result<U256, Error> {
     let server = Server::new(provider.to_owned());
-    let addr = stellar_address_by_index(seed, index);
-    let account = server.load_account(&addr).map_err(|e| Error::StellarSDKError(Arc::new(e)));
+    let addr = stellar_address_by_index(seed, index)?;
+    let account = server
+        .load_account(&addr)
+        .map_err(|e| Error::StellarSDKError(Arc::new(e)));
     let mut bal = 0.0;
     let balances = match account {
-       Ok(acc) => {
-           acc.balances
-       },
-       Err(_) => {
-           vec![]
-       }
+        Ok(acc) => acc.balances,
+        Err(_) => {
+            vec![]
+        }
     };
-    for b in balances{
+    for b in balances {
         if b.asset_type == "native" {
             bal = b.balance.parse::<f64>()?;
         }
     }
-    println!("bal: {:?}",bal);
+    println!("bal: {:?}", bal);
     Ok(U256::zero())
 }
-
 
 async fn eth_sweep_main(
     seed: &HDSeed,
     index: i32,
     to_str: &str,
     provider: &str,
-) -> Result<String, web3::Error> {
+) -> Result<String, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let addr_str = eth_address_by_index(seed, index);
-    let prvk_str = eth_private_by_index(seed, index);
-    let prvk = web3::signing::SecretKey::from_str(&prvk_str).unwrap();
-    let addr = H160::from_str(&addr_str).unwrap();
-    let to = Address::from_str(to_str).unwrap();
-    let gas_price = web3.eth().gas_price().await.unwrap();
-    let bal = web3.eth().balance(addr, None).await.unwrap();
+    let addr_str = eth_address_by_index(seed, index)?;
+    let prvk_str = eth_private_by_index(seed, index)?;
+    let prvk = web3::signing::SecretKey::from_str(&prvk_str)?;
+    let addr = H160::from_str(&addr_str)?;
+    let to = Address::from_str(to_str)?;
+    let gas_price = web3.eth().gas_price().await?;
+    let bal = web3.eth().balance(addr, None).await?;
     let fee = gas_price * 21000 * 5;
     let val_to_send = bal - fee;
     let tx_call_req = CallRequest {
@@ -455,7 +433,7 @@ async fn eth_sweep_main(
         value: Some(bal),
         ..Default::default()
     };
-    let est_gas = web3.eth().estimate_gas(tx_call_req, None).await.unwrap();
+    let est_gas = web3.eth().estimate_gas(tx_call_req, None).await?;
     println!("================");
     println!("gas_price: {:?}", &gas_price);
     println!("bal: {:?}", &bal);
@@ -481,27 +459,24 @@ async fn eth_balance_token(
     index: i32,
     token_addr: &str,
     provider: &str,
-) -> Result<TokenData, web3::Error> {
+) -> Result<TokenData, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let addr_str = eth_address_by_index(seed, index);
-    let addr = H160::from_str(&addr_str).unwrap();
-    let token_address = H160::from_str(token_addr).unwrap();
+    let addr_str = eth_address_by_index(seed, index)?;
+    let addr = H160::from_str(&addr_str)?;
+    let token_address = H160::from_str(token_addr)?;
     let contract = Contract::from_json(
         web3.eth(),
         token_address,
         include_bytes!("../res/erc20.abi.json"),
-    )
-    .unwrap();
+    )?;
     let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
     let decimals: u8 = contract
         .query("decimals", (), None, Options::default(), None)
-        .await
-        .unwrap();
+        .await?;
     let symbol: String = contract
         .query("symbol", (), None, Options::default(), None)
-        .await
-        .unwrap();
+        .await?;
     let balance = result.await.unwrap();
     let balance_calced: U256 = (balance) / (U256::exp10((decimals - 2) as usize));
     let balance_f = (balance_calced.as_u128() as f64) * 0.01;
@@ -519,31 +494,28 @@ async fn tron_balance_token(
     index: i32,
     token_addr: &str,
     provider: &str,
-) -> Result<TokenData, web3::Error> {
+) -> Result<TokenData, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let addr_str = tron_address_by_index_hex(seed, index);
-    let addr = H160::from_str(&addr_str).unwrap();
-    let token_addr_v = base58::decode(token_addr).unwrap();
+    let addr_str = tron_address_by_index_hex(seed, index)?;
+    let addr = H160::from_str(&addr_str)?;
+    let token_addr_v = base58::decode(token_addr)?;
     let token_addr_hex = hex::encode(&token_addr_v);
     let token_addr_hex_p = "0x".to_owned() + &token_addr_hex[2..token_addr_hex.len() - 8];
-    let token_address = H160::from_str(&token_addr_hex_p).unwrap();
+    let token_address = H160::from_str(&token_addr_hex_p)?;
     let contract = Contract::from_json(
         web3.eth(),
         token_address,
         include_bytes!("../res/erc20.abi.json"),
-    )
-    .unwrap();
+    )?;
     let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
     let decimals: u8 = contract
         .query("decimals", (), None, Options::default(), None)
-        .await
-        .unwrap();
+        .await?;
     let symbol: String = contract
         .query("symbol", (), None, Options::default(), None)
-        .await
-        .unwrap();
-    let balance: U256 = result.await.unwrap();
+        .await?;
+    let balance: U256 = result.await?;
     let balance_calced: U256 = (balance) / (U256::exp10((decimals - 2) as usize));
     let balance_f = (balance_calced.as_u128() as f64) * 0.01;
     let token_data = TokenData {
@@ -559,10 +531,10 @@ async fn stellar_balance_token(
     seed: &str,
     index: i32,
     addr: &str,
-    provider: &str
-    ) -> Result<TokenData, Error> {
+    provider: &str,
+) -> Result<TokenData, Error> {
     let server = Server::new(provider.to_owned());
-    let acc = stellar_address_by_index(seed, index);
+    let acc = stellar_address_by_index(seed, index)?;
     let ops_resp = server
         .operations()
         .for_endpoint(Endpoint::Accounts(acc))
@@ -570,13 +542,13 @@ async fn stellar_balance_token(
         .map_err(|e| Error::StellarSDKError(Arc::new(e)))?;
     let ops = ops_resp._embedded.records;
     let mut balance = U256::zero();
-    let mut balance_f= 0.0; 
+    let mut balance_f = 0.0;
     let decimals = 8;
     let mut symbol = " ".to_owned();
     for o in ops {
         let o_asset = o.asset;
         match o_asset {
-            None => {},
+            None => {}
             Some(asset) => {
                 if asset == addr {
                     symbol = (asset.split(":").next()).unwrap_or(" ").to_owned();
@@ -584,7 +556,7 @@ async fn stellar_balance_token(
                         None => 0.,
                         Some(a) => a.parse()?,
                     };
-                    balance = U256::from((balance_f*1_000_000_00.0) as u128);
+                    balance = U256::from((balance_f * 1_000_000_00.0) as u128);
                 }
             }
         }
@@ -605,32 +577,29 @@ async fn eth_sweep_token(
     to_str: &str,
     provider: &str,
     _: Crypto,
-) -> Result<String, web3::Error> {
+) -> Result<String, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let addr_str = eth_address_by_index(seed, index);
-    let prvk_str = eth_private_by_index(seed, index);
-    let prvk = web3::signing::SecretKey::from_str(&prvk_str).unwrap();
-    let addr = H160::from_str(&addr_str).unwrap();
-    let to = Address::from_str(to_str).unwrap();
+    let addr_str = eth_address_by_index(seed, index)?;
+    let prvk_str = eth_private_by_index(seed, index)?;
+    let prvk = web3::signing::SecretKey::from_str(&prvk_str)?;
+    let addr = H160::from_str(&addr_str)?;
+    let to = Address::from_str(to_str)?;
 
-    let token_address = H160::from_str(token_addr).unwrap();
+    let token_address = H160::from_str(token_addr)?;
     let contract = Contract::from_json(
         web3.eth(),
         token_address,
         include_bytes!("../res/erc20.abi.json"),
-    )
-    .unwrap();
+    )?;
     let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
-    let balance_of: U256 = result.await.unwrap();
+    let balance_of: U256 = result.await?;
     println!("balance_of: {:?}", &balance_of);
-    //let result : String = contract.query("transfer", (to, balance_of), None, Options::default(), None).await.unwrap();
     let gas_est = contract
         .estimate_gas("transfer", (to, balance_of), addr, Options::default())
-        .await
-        .unwrap();
+        .await?;
 
-    let gas_price = web3.eth().gas_price().await.unwrap();
+    let gas_price = web3.eth().gas_price().await?;
     let fee = gas_est * gas_price;
     println!("================");
     println!("gas_price: {:?}", &gas_price);
@@ -638,8 +607,7 @@ async fn eth_sweep_token(
     println!("fee: {:?}", &fee);
     let token_call = contract
         .signed_call("transfer", (to, balance_of), Options::default(), &prvk)
-        .await
-        .unwrap();
+        .await?;
     println!("token_receipt: {:?}", token_call);
     //let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
     //let result = web3.eth().send_raw_transaction(signed.raw_transaction).await?;
@@ -647,30 +615,32 @@ async fn eth_sweep_token(
     Ok("lalala".to_owned())
 }
 
-
-pub async fn gas_price(provider: &str) -> Result<U256, web3::Error> {
+pub async fn gas_price(provider: &str) -> Result<U256, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let gas_price = web3.eth().gas_price().await.unwrap();
+    let gas_price = web3.eth().gas_price().await?;
     Ok(gas_price)
 }
 
-pub async fn tx_receipt(hash: H256, provider: &str) -> Result<TransactionReceipt, web3::Error> {
+pub async fn tx_receipt(hash: H256, provider: &str) -> Result<TransactionReceipt, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    let receipt = web3.eth().transaction_receipt(hash).await.unwrap().unwrap();
+    let receipt = web3
+        .eth()
+        .transaction_receipt(hash)
+        .await?
+        .ok_or(Error::Web3NoTransactionError(hash))?;
     Ok(receipt)
 }
 
-pub async fn tx_info(hash: H256, provider: &str) -> Result<Transaction, web3::Error> {
+pub async fn tx_info(hash: H256, provider: &str) -> Result<Transaction, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let tx = web3
         .eth()
         .transaction(web3::types::TransactionId::Hash(hash))
-        .await
-        .unwrap()
-        .unwrap();
+        .await?
+        .ok_or(Error::Web3NoTransactionError(hash))?;
     Ok(tx)
 }
 
@@ -679,11 +649,11 @@ pub async fn send_main(
     to_str: &str,
     val: U256,
     provider: &str,
-) -> Result<H256, web3::Error> {
+) -> Result<H256, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let prvk = web3::signing::SecretKey::from_str(prvk_str).unwrap();
-    let to = Address::from_str(to_str).unwrap();
+    let to = Address::from_str(to_str)?;
     let tx_object = TransactionParameters {
         to: Some(to),
         value: val,

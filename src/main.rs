@@ -1,12 +1,10 @@
 #![feature(let_chains)]
 
-use std::{thread,time};
+use std::{thread, time};
 
 use bip39::Mnemonic;
 use config::Config;
-use web3_hd_signer::wallet::{
-    gas_price, send_main, tx_info
-};
+use web3_hd_signer::wallet::{gas_price, send_main, tx_info};
 
 use clap::Parser;
 

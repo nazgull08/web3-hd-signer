@@ -2641,6 +2641,7 @@ dependencies = [
  "hex",
  "log",
  "reqwest",
+ "rustc-hex",
  "secp256k1",
  "serde",
  "serde_derive",
