@@ -90,19 +90,29 @@ pub enum Crypto {
     Stellar,
 }
 
-#[derive(Debug, Clone)]
-pub struct WalletBalance {}
 
 #[derive(Debug, Clone)]
+pub struct WalletState{
+    pub id: u32,
+    pub address: String,
+    pub state: BalanceState
+}
+
+/// Enum of possible balance states
+#[derive(Debug, Clone)]
 pub enum BalanceState {
-    Empty,
-    Tokens {
+    
+    Empty,///< No money on wallet 
+    
+    Tokens {///< Only tokens on wallet
         tokens_balance: Vec<(String, U256)>,
     },
+    ///< Tokens and main currency on wallet
     TokensMain {
         tokens_balance: Vec<(String, U256)>,
         balance: U256,
     },
+    ///< Only main currency on wallet
     Main {
         balance: U256,
     },
@@ -143,4 +153,5 @@ pub struct TokenData {
     pub balance_f: f64,
     pub decimals: u8,
     pub symbol: String,
+    pub address: String,
 }

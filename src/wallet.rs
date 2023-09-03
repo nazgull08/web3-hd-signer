@@ -484,6 +484,7 @@ async fn eth_balance_token(
         balance_f,
         decimals,
         symbol,
+        address:addr.to_string()
     };
     Ok(token_data)
 }
@@ -522,6 +523,7 @@ async fn tron_balance_token(
         balance_f,
         decimals,
         symbol,
+        address:addr.to_string()
     };
     Ok(token_data)
 }
@@ -565,6 +567,7 @@ async fn stellar_balance_token(
         balance_f,
         decimals,
         symbol,
+        address:addr.to_owned()
     };
     Ok(token_data)
 }

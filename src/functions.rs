@@ -10,16 +10,16 @@ pub async fn balance(
     c_from: u32,
     c_to: u32,
     crypto: Crypto,
-) -> Result<Vec<BalanceState>, Error> {
+) -> Result<Vec<WalletState>, Error> {
     println!("Calcing balances...");
     let rates = rates().await?;
     let phrase = conf.hd_phrase;
 
     let hdw = match crypto {
-        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&phrase)),
-        Crypto::Tron => HDWallet::Tron(HDSeed::new(&phrase)),
-        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&phrase)),
-        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&phrase)),
+        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&phrase)?),
+        Crypto::Tron => HDWallet::Tron(HDSeed::new(&phrase)?),
+        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&phrase)?),
+        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&phrase)?),
         Crypto::Stellar => HDWallet::Stellar(conf.stl_master_key),
     };
 
@@ -53,34 +53,50 @@ pub async fn balance(
         Crypto::Stellar => U256::exp10(16),
     };
 
+    let mut balance_states = vec![];
+
     for i in c_from..c_to {
-        println!("---------");
+        let mut tokens_b: bool = false;
+        let mut main_b: bool = false;
         let addr_i = hdw.address(i as i32)?;
-        println!("i: = {:?}, addr: {addr_i}", i);
         let (m_bal, m_bal_f, m_bal_usd) =
             check_main_balance(&hdw, i as i32, &provider, decimals, rate).await?;
         let tokens_bal = check_tokens_balance(&hdw, i as i32, &provider, &tokens).await?;
-        println!("tokens_bal: {:?}", tokens_bal);
-        let (tx_fee, tx_fee_prep) = check_fee(&hdw, &provider, decimals).await?;
+        let (tx_fee, txo_fee_prep) = check_fee(&hdw, &provider, decimals).await?;
+        let mut tokens_bals = vec![];
         for t in tokens_bal {
             if t.balance > U256::zero() {
-                println!("Found {:.4} {:?}", t.balance_f, t.symbol);
-                println!("bal_token: {:?}", t.symbol);
+                tokens_b = true;
+                tokens_bals.push((t.address,t.balance));
             }
         }
         if m_bal > tx_fee {
-            println!("bal: {:?}", m_bal_f);
-            println!("bal_in_usd: {:.15}", m_bal_usd);
-        } else if m_bal.is_zero() {
-            println!("Zero funds on address. Skipping.");
-        } else {
-            println!(
-                "Funds < fee: {:.12} < {:.12}. Skipping.",
-                m_bal, tx_fee_prep
-            );
+            main_b = true;
+        };
+        let mut wal_state = WalletState{
+            id: i,
+            address: addr_i,
+            state: BalanceState::Empty,
+        };
+        match (tokens_b,main_b) {
+            (false,false) => {
+                balance_states.push(wal_state);
+            },
+            (true,false) => {
+                wal_state.state = BalanceState::Tokens { tokens_balance: tokens_bals};
+                balance_states.push(wal_state);
+            },
+            (false,true) => {
+                wal_state.state = BalanceState::Main { balance: m_bal};
+                balance_states.push(wal_state);
+            },
+            (true,true) => {
+                wal_state.state = BalanceState::TokensMain { tokens_balance: tokens_bals, balance: m_bal};
+                balance_states.push(wal_state)
+            }
         }
     }
-    Ok(vec![])
+    Ok(balance_states)
 }
 
 async fn check_fee(hdw: &HDWallet, provider: &str, decimals: U256) -> Result<(U256, f64), Error> {

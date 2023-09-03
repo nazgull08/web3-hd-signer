@@ -45,7 +45,11 @@ async fn main() -> Result<(),Error>{
                 (Some(cfrom), Some(cto)) => (cto, cfrom),
                 _ => (0, 10),
             };
-            balance(conf, c_from, c_to, crypto).await?;
+            let balances = balance(conf, c_from, c_to, crypto).await?;
+            for b in balances {
+                println!("================================");
+                println!("{:?}",b);
+            }
         }
         Commands::Refill => {
             println!("Implement refill...");
