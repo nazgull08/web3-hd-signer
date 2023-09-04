@@ -37,7 +37,6 @@ pub enum Error {
     ConfigError(#[from] config::ConfigError),
     #[error("Mnemonic error")]
     MnemonicError(String),
-
 }
 
 #[derive(Debug, Clone)]
@@ -90,21 +89,20 @@ pub enum Crypto {
     Stellar,
 }
 
-
 #[derive(Debug, Clone)]
-pub struct WalletState{
+pub struct WalletState {
     pub id: u32,
     pub address: String,
-    pub state: BalanceState
+    pub state: BalanceState,
 }
 
 /// Enum of possible balance states
 #[derive(Debug, Clone)]
 pub enum BalanceState {
-    
-    Empty,///< No money on wallet 
-    
-    Tokens {///< Only tokens on wallet
+    Empty,
+    ///< No money on wallet
+    Tokens {
+        ///< Only tokens on wallet
         tokens_balance: Vec<(String, U256)>,
     },
     ///< Tokens and main currency on wallet

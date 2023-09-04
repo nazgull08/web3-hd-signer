@@ -37,8 +37,9 @@ pub struct HDSeed {
 }
 
 impl HDSeed {
-    pub fn new(phrase: &str) -> Result<Self,Error> {
-        let mnemonic = Mnemonic::from_phrase(phrase, Language::English).map_err(|e| Error::MnemonicError(phrase.to_owned()))?;
+    pub fn new(phrase: &str) -> Result<Self, Error> {
+        let mnemonic = Mnemonic::from_phrase(phrase, Language::English)
+            .map_err(|e| Error::MnemonicError(phrase.to_owned()))?;
         Ok(HDSeed { mnemonic })
     }
 }
@@ -470,7 +471,9 @@ async fn eth_balance_token(
         token_address,
         include_bytes!("../res/erc20.abi.json"),
     )?;
-    let balance= contract.query("balanceOf", (addr,), None, Options::default(), None).await?;
+    let balance = contract
+        .query("balanceOf", (addr,), None, Options::default(), None)
+        .await?;
     let decimals: u8 = contract
         .query("decimals", (), None, Options::default(), None)
         .await?;
@@ -484,7 +487,7 @@ async fn eth_balance_token(
         balance_f,
         decimals,
         symbol,
-        address:addr.to_string()
+        address: addr.to_string(),
     };
     Ok(token_data)
 }
@@ -523,7 +526,7 @@ async fn tron_balance_token(
         balance_f,
         decimals,
         symbol,
-        address:addr.to_string()
+        address: addr.to_string(),
     };
     Ok(token_data)
 }
@@ -567,7 +570,7 @@ async fn stellar_balance_token(
         balance_f,
         decimals,
         symbol,
-        address:addr.to_owned()
+        address: addr.to_owned(),
     };
     Ok(token_data)
 }

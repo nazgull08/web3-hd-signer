@@ -67,31 +67,36 @@ pub async fn balance(
         for t in tokens_bal {
             if t.balance > U256::zero() {
                 tokens_b = true;
-                tokens_bals.push((t.address,t.balance));
+                tokens_bals.push((t.address, t.balance));
             }
         }
         if m_bal > tx_fee {
             main_b = true;
         };
-        let mut wal_state = WalletState{
+        let mut wal_state = WalletState {
             id: i,
             address: addr_i,
             state: BalanceState::Empty,
         };
-        match (tokens_b,main_b) {
-            (false,false) => {
+        match (tokens_b, main_b) {
+            (false, false) => {
                 balance_states.push(wal_state);
-            },
-            (true,false) => {
-                wal_state.state = BalanceState::Tokens { tokens_balance: tokens_bals};
+            }
+            (true, false) => {
+                wal_state.state = BalanceState::Tokens {
+                    tokens_balance: tokens_bals,
+                };
                 balance_states.push(wal_state);
-            },
-            (false,true) => {
-                wal_state.state = BalanceState::Main { balance: m_bal};
+            }
+            (false, true) => {
+                wal_state.state = BalanceState::Main { balance: m_bal };
                 balance_states.push(wal_state);
-            },
-            (true,true) => {
-                wal_state.state = BalanceState::TokensMain { tokens_balance: tokens_bals, balance: m_bal};
+            }
+            (true, true) => {
+                wal_state.state = BalanceState::TokensMain {
+                    tokens_balance: tokens_bals,
+                    balance: m_bal,
+                };
                 balance_states.push(wal_state)
             }
         }

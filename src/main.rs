@@ -28,7 +28,7 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() -> Result<(),Error>{
+async fn main() -> Result<(), Error> {
     let args = Cli::parse();
 
     let conf = Config::builder()
@@ -48,7 +48,7 @@ async fn main() -> Result<(),Error>{
             let balances = balance(conf, c_from, c_to, crypto).await?;
             for b in balances {
                 println!("================================");
-                println!("{:?}",b);
+                println!("{:?}", b);
             }
         }
         Commands::Refill => {
@@ -69,13 +69,12 @@ async fn refill(
     main_addrs: Vec<WalletAddress>,
     token_addrs: Vec<WalletAddress>,
     conf: Settings,
-) -> Result<(),Error>{
+) -> Result<(), Error> {
     let provider = &conf.eth_provider;
     for m_a in main_addrs {
         let g_price = gas_price(provider).await?;
         let val = g_price * 21000;
-        let hash = send_main(sweeper_prvk, &m_a.address, val, provider)
-            .await?;
+        let hash = send_main(sweeper_prvk, &m_a.address, val, provider).await?;
         let mut info = tx_info(hash, provider).await?;
         println!("--------------------");
         println!("{:?}", info);
@@ -90,8 +89,7 @@ async fn refill(
     for m_a in token_addrs {
         let g_price = gas_price(provider).await?;
         let val = g_price * 2 * 65000;
-        let hash = send_main(sweeper_prvk, &m_a.address, val, provider)
-            .await?;
+        let hash = send_main(sweeper_prvk, &m_a.address, val, provider).await?;
         let mut info = tx_info(hash, provider).await?;
         println!("--------------------");
         println!("{:?}", info);
@@ -101,7 +99,7 @@ async fn refill(
         }
         println!("---------confirmed-----------");
         println!("{:?}", info)
-    };
+    }
     Ok(())
 }
 
