@@ -361,7 +361,15 @@ pub async fn sweep_tokens(
 
 pub async fn refill_address(sweeper_prvk: &str, addr :&str, val: U256, provider: &str) -> Result<(),Error> {
     let hash = send_main(sweeper_prvk, addr, val, provider).await?;
-    let mut info = tx_info(hash, provider).await?;
+    let mut info ={
+        let r_info = tx_info(hash, provider).await;
+        while r_info.is_err() { 
+            println!("waiting for transaction...");
+            thread::sleep(time::Duration::from_secs(1));
+        }
+        r_info?
+
+    };
     println!("--------------------");
     println!("{:?}", info);
     while info.transaction_index.is_none() {
