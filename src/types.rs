@@ -37,6 +37,8 @@ pub enum Error {
     ConfigError(#[from] config::ConfigError),
     #[error("Mnemonic error")]
     MnemonicError(String),
+    #[error("Tron address {0} to hex error")]
+    TronToHexError(String),
 }
 
 #[derive(Debug, Clone)]

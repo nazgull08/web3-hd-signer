@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use hex::ToHex;
 use ::sha256::digest;
 use bip39::Language;
 use bip39::{Mnemonic, Seed};
@@ -121,7 +122,7 @@ impl HDWallet {
                 eth_sweep_token(seed, index, addr, to, provider, Crypto::Eth).await
             }
             HDWallet::Tron(seed) => {
-                eth_sweep_token(seed, index, addr, to, provider, Crypto::Tron).await
+                tron_sweep_token(seed, index, addr, to, provider, Crypto::Tron).await
             }
             HDWallet::Stellar(seed) => Ok(H256::zero()),
         }
@@ -615,6 +616,54 @@ async fn eth_sweep_token(
     Ok(token_call)
 }
 
+async fn tron_sweep_token(
+    seed: &HDSeed,
+    index: i32,
+    token_addr: &str,
+    to_str: &str,
+    provider: &str,
+    _: Crypto,
+) -> Result<H256, Error> {
+    let transport = web3::transports::Http::new(provider)?;
+    let web3 = web3::Web3::new(transport);
+    println!("all okay1");
+    let addr_str = tron_address_by_index_hex(seed, index)?;
+    println!("all okay2");
+    let prvk_str = tron_private_by_index(seed, index)?;
+    println!("all okay3");
+    let prvk = web3::signing::SecretKey::from_str(&prvk_str)?;
+    println!("all okay4");
+    let addr = H160::from_str(&addr_str)?;
+    println!("all okay5");
+    let to = Address::from_str(&tron_to_hex(to_str)?)?;
+    println!("all okay6");
+    let token_address = H160::from_str(&tron_to_hex(token_addr)?)?;
+    println!("all okay7");
+    let contract = Contract::from_json(
+        web3.eth(),
+        token_address,
+        include_bytes!("../res/erc20.abi.json"),
+    )?;
+    println!("all okay8");
+    let balance_of: U256= contract.query("balanceOf", (addr,), None, Options::default(), None).await?;
+    println!("balance_of: {:?}", &balance_of);
+    let gas_est = contract
+        .estimate_gas("transfer", (to, balance_of), addr, Options::default())
+        .await?;
+
+    let gas_price = web3.eth().gas_price().await?;
+    let fee = gas_est * gas_price;
+    println!("================");
+    println!("gas_price: {:?}", &gas_price);
+    println!("gas_est: {:?}", &gas_est);
+    println!("fee: {:?}", &fee);
+    let token_call = contract
+        .signed_call("transfer", (to, balance_of), Options::default(), &prvk)
+        .await?;
+    println!("token_receipt: {:?}", token_call);
+    Ok(token_call)
+}
+
 pub async fn gas_price(provider: &str) -> Result<U256, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
@@ -687,4 +736,15 @@ pub fn validate_tron_address(addr: String) -> bool {
             Err(_) => false,
         }
     }
+}
+
+pub fn tron_to_hex(addr: &str) -> Result<String,Error> {
+    if addr.len() != 34 {
+        Err(Error::TronToHexError(addr.to_owned()))
+    } else {
+        let mut bytes = base58::decode(&addr)?;
+        let check = bytes.split_off(bytes.len() - 4);
+        let hex = check.encode_hex();
+        Ok(hex)
+        }
 }
