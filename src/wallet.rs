@@ -115,7 +115,7 @@ impl HDWallet {
         addr: &str,
         to: &str,
         provider: &str,
-    ) -> Result<String, Error> {
+    ) -> Result<H256, Error> {
         match self {
             HDWallet::Ethereum(seed) => {
                 eth_sweep_token(seed, index, addr, to, provider, Crypto::Eth).await
@@ -123,7 +123,7 @@ impl HDWallet {
             HDWallet::Tron(seed) => {
                 eth_sweep_token(seed, index, addr, to, provider, Crypto::Tron).await
             }
-            HDWallet::Stellar(seed) => Ok("unimplemented".to_owned()),
+            HDWallet::Stellar(seed) => Ok(H256::zero()),
         }
     }
 }
@@ -487,7 +487,7 @@ async fn eth_balance_token(
         balance_f,
         decimals,
         symbol,
-        address: addr.to_string(),
+        address: token_addr.to_owned()
     };
     Ok(token_data)
 }
@@ -526,7 +526,7 @@ async fn tron_balance_token(
         balance_f,
         decimals,
         symbol,
-        address: addr.to_string(),
+        address: token_addr_hex_p
     };
     Ok(token_data)
 }
@@ -582,7 +582,7 @@ async fn eth_sweep_token(
     to_str: &str,
     provider: &str,
     _: Crypto,
-) -> Result<String, Error> {
+) -> Result<H256, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index)?;
@@ -590,15 +590,13 @@ async fn eth_sweep_token(
     let prvk = web3::signing::SecretKey::from_str(&prvk_str)?;
     let addr = H160::from_str(&addr_str)?;
     let to = Address::from_str(to_str)?;
-
     let token_address = H160::from_str(token_addr)?;
     let contract = Contract::from_json(
         web3.eth(),
         token_address,
         include_bytes!("../res/erc20.abi.json"),
     )?;
-    let result = contract.query("balanceOf", (addr,), None, Options::default(), None);
-    let balance_of: U256 = result.await?;
+    let balance_of: U256= contract.query("balanceOf", (addr,), None, Options::default(), None).await?;
     println!("balance_of: {:?}", &balance_of);
     let gas_est = contract
         .estimate_gas("transfer", (to, balance_of), addr, Options::default())
@@ -614,10 +612,7 @@ async fn eth_sweep_token(
         .signed_call("transfer", (to, balance_of), Options::default(), &prvk)
         .await?;
     println!("token_receipt: {:?}", token_call);
-    //let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
-    //let result = web3.eth().send_raw_transaction(signed.raw_transaction).await?;
-    //println!("Tx succeeded with hash: {}", result);
-    Ok("lalala".to_owned())
+    Ok(token_call)
 }
 
 pub async fn gas_price(provider: &str) -> Result<U256, Error> {
@@ -669,7 +664,7 @@ pub async fn send_main(
         .eth()
         .send_raw_transaction(signed.raw_transaction)
         .await?;
-    println!("Tx succeeded with hash: {}", result);
+    println!("Tx succeeded with hash: {:?}", result);
     Ok(result)
 }
 

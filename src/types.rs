@@ -2,7 +2,7 @@ use serde_derive::Deserialize;
 use web3::types::{H256, U256};
 
 use clap::{Parser, Subcommand, ValueEnum};
-use std::sync::Arc;
+use std::{sync::Arc, fmt::Display};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -71,12 +71,15 @@ pub struct Settings {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    Balance {
+    Balance{c: u32},
+    Balances {
         c_from: Option<u32>,
         c_to: Option<u32>,
     },
     Refill,
-    Sweep,
+    Sweep {
+        c: u32
+    },
     GenPhrase,
 }
 
@@ -152,4 +155,16 @@ pub struct TokenData {
     pub decimals: u8,
     pub symbol: String,
     pub address: String,
+}
+
+impl Display for Crypto {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::result::Result<(), ::std::fmt::Error> {
+        match *self {
+            Crypto::Eth => f.write_str("Eth"),
+            Crypto::Tron => f.write_str("Tron"),
+            Crypto::Polygon => f.write_str("Polygon"),
+            Crypto::BSC => f.write_str("BSC"),
+            Crypto::Stellar => f.write_str("Stellar"),
+        }
+    }
 }

@@ -37,7 +37,11 @@ async fn main() -> Result<(), Error> {
         .try_deserialize::<Settings>()?;
     let crypto = args.crypto;
     match args.command {
-        Commands::Balance {
+        Commands::Balance {c} =>{
+            let b = balance(&conf,c,&crypto).await?;
+            println!("{:?}",b);
+        },
+        Commands::Balances {
             c_from: o_c_from,
             c_to: o_c_to,
         } => {
@@ -45,18 +49,29 @@ async fn main() -> Result<(), Error> {
                 (Some(cfrom), Some(cto)) => (cto, cfrom),
                 _ => (0, 10),
             };
-            let balances = balance(conf, c_from, c_to, crypto).await?;
+            let balances = balances(&conf, c_from, c_to, &crypto).await?;
             for b in balances {
                 println!("================================");
                 println!("{:?}", b);
             }
-        }
+        },
         Commands::Refill => {
             println!("Implement refill...");
-        }
-        Commands::Sweep => {
-            println!("Implement sweep...");
-        }
+        },
+        Commands::Sweep{c} => {
+            let b = balance(&conf, c, &crypto).await?;
+            match b.state {
+                BalanceState::Empty => {println!("nothing to sweep")},
+                BalanceState::Main { balance } => { sweep_main(conf, c, crypto).await?; },
+                BalanceState::Tokens { tokens_balance } => {
+                    sweep_tokens(&conf, c, &crypto, tokens_balance).await?;
+                },
+                BalanceState::TokensMain { tokens_balance, balance } => { 
+                    sweep_tokens(&conf, c, &crypto, tokens_balance).await?;
+                    sweep_main(conf, c, crypto).await?; 
+                },
+            };
+        },
         Commands::GenPhrase => {
             generate_hd_prase().await;
         }
@@ -64,7 +79,7 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn refill(
+async fn refill_all(
     sweeper_prvk: &str,
     main_addrs: Vec<WalletAddress>,
     token_addrs: Vec<WalletAddress>,
