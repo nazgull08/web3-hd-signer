@@ -83,7 +83,7 @@ pub enum Commands {
         c: u32
     },
     GenPhrase,
-    JSTest
+    TronCall
 }
 
 #[derive(ValueEnum, Debug, Clone)]

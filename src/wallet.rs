@@ -18,7 +18,7 @@ use sha3::{Digest, Keccak256};
 use std::sync::Arc;
 use web3::contract::{Contract, Options};
 use web3::types::{
-    Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256,
+    Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256, Bytes,
 };
 
 use crate::types::*;
@@ -60,6 +60,16 @@ impl HDWallet {
             HDWallet::Ethereum(seed) => eth_private_by_index(seed, index),
             HDWallet::Tron(seed) => tron_private_by_index(seed, index),
             HDWallet::Stellar(master_key) => stellar_address_by_index(master_key, index),
+        }
+    }
+
+    pub fn keypair(&self, index: i32) -> Result<(ExtendedPrivKey,ExtendedPubKey), Error> {
+        match self {
+            HDWallet::Ethereum(seed) => eth_keypair_by_index(seed, index),
+            HDWallet::Tron(seed) => tron_keypair_by_index(seed, index),
+            HDWallet::Stellar(master_key) => tron_keypair_by_index(&HDSeed::new("")?, index), //NTD
+                                                                                                      //Fix
+                                                                                                      //stellar
         }
     }
 
@@ -203,6 +213,22 @@ fn tron_private_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
     let (pk, _) =
         get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
     Ok(pk.private_key.display_secret().to_string())
+}
+
+fn eth_keypair_by_index(seed: &HDSeed, index: i32) -> Result<(ExtendedPrivKey,ExtendedPubKey), Error> {
+    let hd_path_str = format!("m/44'/60'/0'/0/{index}");
+    let seed_m = Seed::new(&seed.mnemonic, "");
+    let (pk, pubk) =
+        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
+    Ok((pk,pubk))
+}
+
+fn tron_keypair_by_index(seed: &HDSeed, index: i32) -> Result<(ExtendedPrivKey,ExtendedPubKey), Error> {
+    let hd_path_str = format!("m/44'/195'/0'/0/{index}");
+    let seed_m = Seed::new(&seed.mnemonic, "");
+    let (pk, pubk) =
+        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
+    Ok((pk,pubk))
 }
 
 fn eth_public_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
@@ -488,15 +514,23 @@ async fn tron_sweep_main(
     let tx_object = TransactionParameters {
         to: Some(to),
         value: val_to_send,
+        nonce:Some(U256::from(11)),
         ..Default::default()
     };
+    println!("all okay main 1");
     let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
-    let result = web3
-        .eth()
-        .send_raw_transaction(signed.raw_transaction)
-        .await?;
-    println!("Tx succeeded with hash: {}", result);
-    Ok(result.to_string())
+    let tx_raw = "0a026ffa22086e06b4977c94304540908fb8e4a6315a67080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a1541279f93bc1feb8af89d3253c5471b823c26671a92121541c90c049a15d5ef5af136653ccd6f26758b821e9018a08d0670c3c5b4e4a631";
+    let signed_hex = 
+    println!("all okay main 2");
+    println!("signed: {:?}",signed.raw_transaction);
+    println!("signed_hex: {:?}",signed_hex);
+    Ok("aaaaaaaa".to_owned())
+    //let result = web3
+    //    .eth()
+    //    .send_raw_transaction(signed.raw_transaction)
+    //    .await?;
+    //println!("Tx succeeded with hash: {}", result);
+    //Ok(result.to_string())
 }
 
 async fn eth_balance_token(
@@ -652,11 +686,9 @@ async fn eth_sweep_token(
     println!("gas_price: {:?}", &gas_price);
     println!("gas_est: {:?}", &gas_est);
     println!("fee: {:?}", &fee);
-    println!("all okay1 eth");
     let token_call = contract
         .signed_call("transfer", (to, balance_of), Options::default(), &prvk)
         .await?;
-    println!("all okay2 eth");
     println!("token_receipt: {:?}", token_call);
     Ok(token_call)
 }
@@ -695,13 +727,17 @@ async fn tron_sweep_token(
     println!("gas_price: {:?}", &gas_price);
     println!("gas_est: {:?}", &gas_est);
     println!("fee: {:?}", &fee);
-    println!("all okay1");
+    println!("all okay token 1");
     let token_call = contract
-        .signed_call("transfer", (to, balance_of), Options::default(), &prvk)
+        .call("transfer", (to, balance_of), addr,Options {nonce:Some(U256::from(10)),..Default::default()})
         .await?;
-    println!("all okay2");
-    println!("token_receipt: {:?}", token_call);
-    Ok(token_call)
+    println!("all okay token 2");
+    println!("token_call: {:?}",token_call);
+    let signed_token_call = web3.accounts().sign(token_call, &prvk);
+    println!("all okay token 3");
+    println!("signed token call: {:?}", signed_token_call);
+    Err(Error::MnemonicError("aaa".to_owned()))
+    //Ok(token_call)
 }
 
 pub async fn gas_price(provider: &str) -> Result<U256, Error> {

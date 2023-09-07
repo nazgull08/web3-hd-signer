@@ -4,7 +4,6 @@ use std::{thread, time};
 
 use bip39::Mnemonic;
 use config::Config;
-use web3_hd_signer::tronwebbinding::test_1;
 use web3_hd_signer::wallet::{gas_price, send_main, tx_info};
 
 use clap::Parser;
@@ -76,9 +75,10 @@ async fn main() -> Result<(), Error> {
         Commands::GenPhrase => {
             generate_hd_prase().await;
         }
-        Commands::JSTest=> {
-            println!("Testing js calls... =(");
-            test_1();
+        Commands::TronCall=> {
+            println!("TronCall test");
+            let res = tron_call(&conf, 0)?;
+            println!("res: {:?}",res);
         }
     };
     Ok(())

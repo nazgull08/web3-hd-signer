@@ -1,5 +1,4 @@
 pub mod functions;
-pub mod tronwebbinding;
 pub mod types;
 pub mod wallet;
 
