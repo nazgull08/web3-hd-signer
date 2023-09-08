@@ -83,7 +83,7 @@ pub enum Commands {
         c: u32
     },
     GenPhrase,
-    TronCall
+    PrivKey{c: u32}
 }
 
 #[derive(ValueEnum, Debug, Clone)]

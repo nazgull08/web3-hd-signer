@@ -409,3 +409,26 @@ pub fn tron_call(
     Ok("still not implemented".to_owned())
 
 }
+
+pub async fn privkey(
+    conf: &Settings,
+    i: u32,
+    crypto: &Crypto,
+) -> Result<(), Error> {
+    let phrase = &conf.hd_phrase;
+    let mk= &conf.stl_master_key;
+
+    let hdw = match crypto {
+        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&phrase)?),
+        Crypto::Tron => HDWallet::Tron(HDSeed::new(&phrase)?),
+        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&phrase)?),
+        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&phrase)?),
+        Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
+    };
+
+    let addr_i = hdw.address(i as i32)?;
+    let priv_k = hdw.private(i as i32)?;
+    println!("addr: {:?}",addr_i);
+    println!("priv: {:?}",priv_k);
+    Ok(())
+}

@@ -617,40 +617,53 @@ async fn stellar_balance_token(
 ) -> Result<TokenData, Error> {
     let server = Server::new(provider.to_owned());
     let acc = stellar_address_by_index(seed, index)?;
-    let ops_resp = server
+    let r_ops_resp = server
         .operations()
         .for_endpoint(Endpoint::Accounts(acc))
-        .call()
-        .map_err(|e| Error::StellarSDKError(Arc::new(e)))?;
-    let ops = ops_resp._embedded.records;
+        .call();
     let mut balance = U256::zero();
     let mut balance_f = 0.0;
     let decimals = 8;
     let mut symbol = " ".to_owned();
-    for o in ops {
-        let o_asset = o.asset;
-        match o_asset {
-            None => {}
-            Some(asset) => {
-                if asset == addr {
-                    symbol = (asset.split(":").next()).unwrap_or(" ").to_owned();
-                    balance_f = match o.amount.clone() {
-                        None => 0.,
-                        Some(a) => a.parse()?,
-                    };
-                    balance = U256::from((balance_f * 1_000_000_00.0) as u128);
+    match r_ops_resp {
+        Ok(ops_resp) => {
+            let ops = ops_resp._embedded.records;
+            for o in ops {
+                let o_asset = o.asset;
+                match o_asset {
+                    None => {}
+                    Some(asset) => {
+                        if asset == addr {
+                            symbol = (asset.split(":").next()).unwrap_or(" ").to_owned();
+                            balance_f = match o.amount.clone() {
+                                None => 0.,
+                                Some(a) => a.parse()?,
+                            };
+                            balance = U256::from((balance_f * 1_000_000_00.0) as u128);
+                        }
+                    }
                 }
             }
-        }
+            let token_data = TokenData {
+                balance,
+                balance_f,
+                decimals,
+                symbol,
+                address: addr.to_owned(),
+            };
+            Ok(token_data)
+            },
+        Err(_) => {
+            let token_data = TokenData {
+                balance,
+                balance_f,
+                decimals,
+                symbol,
+                address: addr.to_owned(),
+            };
+            Ok(token_data)
+        } 
     }
-    let token_data = TokenData {
-        balance,
-        balance_f,
-        decimals,
-        symbol,
-        address: addr.to_owned(),
-    };
-    Ok(token_data)
 }
 
 async fn eth_sweep_token(

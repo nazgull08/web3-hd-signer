@@ -75,10 +75,8 @@ async fn main() -> Result<(), Error> {
         Commands::GenPhrase => {
             generate_hd_prase().await;
         }
-        Commands::TronCall=> {
-            println!("TronCall test");
-            let res = tron_call(&conf, 0)?;
-            println!("res: {:?}",res);
+        Commands::PrivKey{c}=> {
+            let b = privkey(&conf,c,&crypto).await?;
         }
     };
     Ok(())
