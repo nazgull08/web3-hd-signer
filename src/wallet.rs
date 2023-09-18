@@ -21,6 +21,14 @@ use web3::types::{
     Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256, Bytes,
 };
 
+use bdk::{FeeRate, Wallet, SyncOptions, descriptor, SignOptions};
+use bdk::database::MemoryDatabase;
+use bdk::blockchain::ElectrumBlockchain;
+use bdk::electrum_client::{Client, ElectrumApi};
+
+use bitcoin::consensus::serialize;
+use bdk::wallet::AddressIndex::New;
+
 use crate::types::*;
 
 use stellar_sdk::{types::Asset, utils::Endpoint, CallBuilder, Keypair, Server};
@@ -30,6 +38,7 @@ pub enum HDWallet {
     Ethereum(HDSeed),
     Tron(HDSeed),
     Stellar(String),
+    Bitcoin(HDSeed),
 }
 
 #[derive(Debug, Clone)]
@@ -52,6 +61,7 @@ impl HDWallet {
             HDWallet::Ethereum(seed) => eth_address_by_index(seed, index),
             HDWallet::Tron(seed) => tron_address_by_index(seed, index),
             HDWallet::Stellar(master_key) => stellar_address_by_index(master_key, index),
+            HDWallet::Bitcoin(seed) => bitcoin_address_by_index(seed, index),
         }
     }
 
@@ -60,6 +70,7 @@ impl HDWallet {
             HDWallet::Ethereum(seed) => eth_private_by_index(seed, index),
             HDWallet::Tron(seed) => tron_private_by_index(seed, index),
             HDWallet::Stellar(master_key) => stellar_address_by_index(master_key, index),
+            HDWallet::Bitcoin(seed) => bitcoin_address_by_index(seed, index),
         }
     }
 
@@ -68,8 +79,7 @@ impl HDWallet {
             HDWallet::Ethereum(seed) => eth_keypair_by_index(seed, index),
             HDWallet::Tron(seed) => tron_keypair_by_index(seed, index),
             HDWallet::Stellar(master_key) => tron_keypair_by_index(&HDSeed::new("")?, index), //NTD
-                                                                                                      //Fix
-                                                                                                      //stellar
+            HDWallet::Bitcoin(_) => Err(Error::BitcoinNoSupport("keypair".to_string()))
         }
     }
 
@@ -78,6 +88,7 @@ impl HDWallet {
             HDWallet::Ethereum(seed) => eth_public_by_index(seed, index),
             HDWallet::Tron(seed) => tron_public_by_index(seed, index),
             HDWallet::Stellar(master_key) => stellar_address_by_index(master_key, index),
+            HDWallet::Bitcoin(seed) => eth_public_by_index(seed, index),
         }
     }
 
@@ -86,6 +97,7 @@ impl HDWallet {
             HDWallet::Ethereum(seed) => eth_sign(seed, index),
             HDWallet::Tron(seed) => tron_sign(seed, index),
             HDWallet::Stellar(master_key) => stellar_sign(master_key, index),
+            HDWallet::Bitcoin(seed) => eth_sign(seed, index),
         }
     }
 
@@ -94,6 +106,7 @@ impl HDWallet {
             HDWallet::Ethereum(seed) => eth_balance(seed, index, provider).await,
             HDWallet::Tron(seed) => tron_balance(seed, index, provider).await,
             HDWallet::Stellar(master_key) => stellar_balance(master_key, index, provider).await,
+            HDWallet::Bitcoin(seed) => eth_balance(seed, index, provider).await,
         }
     }
 
@@ -109,6 +122,7 @@ impl HDWallet {
             HDWallet::Stellar(master_key) => {
                 stellar_balance_token(master_key, index, addr, provider).await
             }
+            HDWallet::Bitcoin(seed) => eth_balance_token(seed, index, addr, provider).await,
         }
     }
 
@@ -117,6 +131,7 @@ impl HDWallet {
             HDWallet::Ethereum(seed) => eth_sweep_main(seed, index, to, provider).await,
             HDWallet::Tron(seed) => tron_sweep_main(seed, index, to, provider).await,
             HDWallet::Stellar(master_key) => Ok("unimplemented".to_owned()),
+            HDWallet::Bitcoin(seed) => eth_sweep_main(seed, index, to, provider).await,
         }
     }
 
@@ -135,6 +150,7 @@ impl HDWallet {
                 tron_sweep_token(seed, index, addr, to, provider, Crypto::Tron).await
             }
             HDWallet::Stellar(seed) => Ok(H256::zero()),
+            HDWallet::Bitcoin(seed) => Ok(H256::zero())
         }
     }
 }
@@ -841,3 +857,30 @@ pub fn tron_to_hex(addr: &str) -> Result<String,Error> {
         }
 }
 
+
+fn bitcoin_address_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
+    Ok("unimplemented".to_string())
+}
+
+async fn btc_sweep_main(
+    seed: &HDSeed,
+    index: i32,
+    to_str: &str,
+    provider: &str,
+) -> Result<String, Error> {
+    let client = Client::new(provider).unwrap();
+    let external_descriptor = "wpkh(tprv8ZgxMBicQKsPdy6LMhUtFHAgpocR8GC6QmwMSFpZs7h6Eziw3SpThFfczTDh5rW2krkqffa11UpX3XkeTTB2FvzZKWXqPY54Y6Rq4AQ5R8L/84'/1'/0'/0/*)";
+    let internal_descriptor = "wpkh(tprv8ZgxMBicQKsPdy6LMhUtFHAgpocR8GC6QmwMSFpZs7h6Eziw3SpThFfczTDh5rW2krkqffa11UpX3XkeTTB2FvzZKWXqPY54Y6Rq4AQ5R8L/84'/1'/0'/1/*)";
+    //TODO -- descriptors should be created from HD seed.
+    let wallet = Wallet::new(external_descriptor, Some(internal_descriptor), bdk::bitcoin::Network::Testnet, MemoryDatabase::default()).unwrap();
+    let s_addr = bdk::bitcoin::Address::from_str(to_str).unwrap();
+     let mut tx_builder = wallet.build_tx();     
+     tx_builder.add_recipient(s_addr.script_pubkey(), 10000 ).enable_rbf();
+     let mut psbt = tx_builder.finish().unwrap();     
+     let finalized = wallet.sign(&mut psbt.0, SignOptions::default()).unwrap();
+     assert!(finalized);     
+     let tx = psbt.0.extract_tx();
+     client.transaction_broadcast(&tx).unwrap();     
+     println!("Tx broadcasted! Txid: {}", tx.txid());
+    Ok(tx.txid().to_string())
+}

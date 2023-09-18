@@ -39,6 +39,9 @@ pub enum Error {
     MnemonicError(String),
     #[error("Tron address {0} to hex error")]
     TronToHexError(String),
+    #[error("Btc implementation does not support this action yet")]
+    BitcoinNoSupport(String),
+
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +72,8 @@ pub struct Settings {
     pub stl_tokens: Vec<String>,
     pub stl_safe: String,
     pub stl_provider: String,
+    pub btc_safe: String,
+    pub btc_provider: String,
 }
 
 #[derive(Subcommand, Debug)]
@@ -93,6 +98,7 @@ pub enum Crypto {
     Polygon,
     BSC,
     Stellar,
+    Btc
 }
 
 #[derive(Debug, Clone)]
@@ -140,6 +146,7 @@ pub struct RatesRaw {
     pub MATIC: f64,
     pub BNB: f64,
     pub XLM: f64,
+    pub BTC: f64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -149,6 +156,7 @@ pub struct Rates {
     pub mtc: f64,
     pub bnb: f64,
     pub xlm: f64,
+    pub btc: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -168,6 +176,7 @@ impl Display for Crypto {
             Crypto::Polygon => f.write_str("Polygon"),
             Crypto::BSC => f.write_str("BSC"),
             Crypto::Stellar => f.write_str("Stellar"),
+            Crypto::Btc => f.write_str("Bitcoin"),
         }
     }
 }
