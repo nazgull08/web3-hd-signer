@@ -1,11 +1,11 @@
-use std::{thread, time, str::FromStr};
 use bitcoin::PrivateKey;
 use secp256k1::Secp256k1;
-use web3::types::{U256, H160, H256};
+use std::{str::FromStr, thread, time};
+use web3::types::{H160, H256, U256};
 
 use crate::{
     types::*,
-    wallet::{gas_price, HDSeed, HDWallet, send_main, tx_info},
+    wallet::{gas_price, send_main, tx_info, HDSeed, HDWallet},
 };
 
 pub async fn balances(
@@ -25,7 +25,7 @@ pub async fn balances(
         Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&phrase)?),
         Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&phrase)?),
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(&phrase)?)
+        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(&phrase)?),
     };
 
     let empty = vec![];
@@ -36,7 +36,7 @@ pub async fn balances(
         Crypto::BSC => &conf.bsc_tokens,
         Crypto::Polygon => &conf.plg_tokens,
         Crypto::Stellar => &conf.stl_tokens,
-        Crypto::Btc => &empty
+        Crypto::Btc => &empty,
     };
     let provider = match crypto {
         Crypto::Eth => &conf.eth_provider,
@@ -52,7 +52,7 @@ pub async fn balances(
         Crypto::BSC => rates.bnb,
         Crypto::Polygon => rates.mtc,
         Crypto::Stellar => rates.xlm,
-        Crypto::Btc => rates.btc
+        Crypto::Btc => rates.btc,
     };
 
     let decimals = match crypto {
@@ -114,15 +114,11 @@ pub async fn balances(
     }
     Ok(balance_states)
 }
-pub async fn balance(
-    conf: &Settings,
-    i: u32,
-    crypto: &Crypto,
-) -> Result<WalletState, Error> {
+pub async fn balance(conf: &Settings, i: u32, crypto: &Crypto) -> Result<WalletState, Error> {
     println!("Calcing balances...");
     let rates = rates().await?;
     let phrase = &conf.hd_phrase;
-    let mk= &conf.stl_master_key;
+    let mk = &conf.stl_master_key;
 
     let hdw = match crypto {
         Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&phrase)?),
@@ -130,7 +126,7 @@ pub async fn balance(
         Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&phrase)?),
         Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&phrase)?),
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
-        Crypto::Btc=> HDWallet::Bitcoin(HDSeed::new(&phrase)?),
+        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(&phrase)?),
     };
 
     let empty = vec![];
@@ -141,8 +137,7 @@ pub async fn balance(
         Crypto::BSC => &conf.bsc_tokens,
         Crypto::Polygon => &conf.plg_tokens,
         Crypto::Stellar => &conf.stl_tokens,
-        Crypto::Btc=> &empty
-
+        Crypto::Btc => &empty,
     };
     let provider = match crypto {
         Crypto::Eth => &conf.eth_provider,
@@ -170,7 +165,6 @@ pub async fn balance(
         Crypto::Btc => U256::exp10(8),
     };
 
-
     let mut tokens_b: bool = false;
     let mut main_b: bool = false;
     let addr_i = hdw.address(i as i32)?;
@@ -194,9 +188,7 @@ pub async fn balance(
         state: BalanceState::Empty,
     };
     match (tokens_b, main_b) {
-        (false, false) => {
-            Ok(wal_state)
-        }
+        (false, false) => Ok(wal_state),
         (true, false) => {
             wal_state.state = BalanceState::Tokens {
                 tokens_balance: tokens_bals,
@@ -290,12 +282,7 @@ pub async fn rates() -> Result<Rates, Error> {
     Ok(rates)
 }
 
-
-pub async fn sweep_main(
-    conf: Settings,
-    i: u32,
-    crypto: Crypto,
-    ) -> Result<(),Error> {
+pub async fn sweep_main(conf: Settings, i: u32, crypto: Crypto) -> Result<(), Error> {
     let hdw = match crypto {
         Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&conf.hd_phrase)?),
         Crypto::Tron => HDWallet::Tron(HDSeed::new(&conf.hd_phrase)?),
@@ -320,7 +307,11 @@ pub async fn sweep_main(
         Crypto::Stellar => conf.stl_safe,
         Crypto::Btc => conf.btc_safe,
     };
-    println!("Sweeping from {0} in {1}...", hdw.address(i as i32)?,crypto);
+    println!(
+        "Sweeping from {0} in {1}...",
+        hdw.address(i as i32)?,
+        crypto
+    );
     let res = hdw.sweep(i as i32, &to, &provider).await?;
     println!("{res}");
     Ok(())
@@ -331,7 +322,7 @@ pub async fn sweep_tokens(
     i: u32,
     crypto: &Crypto,
     tokens: Vec<(String, U256)>,
-    ) -> Result<(),Error> {
+) -> Result<(), Error> {
     let hdw = match crypto {
         Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&conf.hd_phrase)?),
         Crypto::Tron => HDWallet::Tron(HDSeed::new(&conf.hd_phrase)?),
@@ -357,16 +348,19 @@ pub async fn sweep_tokens(
         Crypto::Btc => &conf.btc_safe,
     };
     let addr = hdw.address(i as i32)?;
-    println!("Sweeping from {0} in {1}...",&addr,crypto);
+    println!("Sweeping from {0} in {1}...", &addr, crypto);
     let balance = hdw.balance(i as i32, &provider).await?;
     let fee = check_fee_token(&hdw, &provider).await? * tokens.len();
-    if balance < fee{
+    if balance < fee {
         let val = fee - balance;
-        println!("Balance: {0}, fee {1}, refilling for {2}",balance,fee,val);
+        println!(
+            "Balance: {0}, fee {1}, refilling for {2}",
+            balance, fee, val
+        );
         refill_address(&conf.sweeper, &addr, val, &provider).await?;
     };
-    for (tok,_) in tokens{
-        println!("token_addr: {:?}",&tok);
+    for (tok, _) in tokens {
+        println!("token_addr: {:?}", &tok);
         println!("tok: {tok}");
         let hash = hdw.sweep_token(i as i32, &tok, &to, &provider).await?;
         println!("sweeped: {:?}", hash);
@@ -379,20 +373,22 @@ pub async fn sweep_tokens(
         println!("---------confirmed-----------");
     }
     Ok(())
-
 }
 
-
-pub async fn refill_address(sweeper_prvk: &str, addr :&str, val: U256, provider: &str) -> Result<(),Error> {
+pub async fn refill_address(
+    sweeper_prvk: &str,
+    addr: &str,
+    val: U256,
+    provider: &str,
+) -> Result<(), Error> {
     let hash = send_main(sweeper_prvk, addr, val, provider).await?;
-    let mut info ={
+    let mut info = {
         let r_info = tx_info(hash, provider).await;
-        while r_info.is_err() { 
+        while r_info.is_err() {
             println!("waiting for transaction...");
             thread::sleep(time::Duration::from_secs(1));
         }
         r_info?
-
     };
     println!("--------------------");
     println!("{:?}", info);
@@ -404,41 +400,33 @@ pub async fn refill_address(sweeper_prvk: &str, addr :&str, val: U256, provider:
     println!("---------confirmed-----------");
     println!("{:?}", info);
     Ok(())
-
 }
 
-
-pub fn tron_call(
-    conf: &Settings,
-    i: i32, 
-    ) -> Result<String,Error>{
+pub fn tron_call(conf: &Settings, i: i32) -> Result<String, Error> {
     let tx_raw = "0a026ffa22086e06b4977c94304540908fb8e4a6315a67080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a1541279f93bc1feb8af89d3253c5471b823c26671a92121541c90c049a15d5ef5af136653ccd6f26758b821e9018a08d0670c3c5b4e4a631";
     let hdw = HDWallet::Tron(HDSeed::new(&conf.hd_phrase)?);
     let hdw_addr = hdw.address(i)?;
     let hdw_priv = hdw.private(i)?;
     let hdw_keypair = hdw.keypair(i)?;
-    let tx_par = web3::types::TransactionParameters{
-        nonce:Some(U256::from(10)),
-        to:Some(H160::from_str("0x41c90c049a15d5ef5af136653ccd6f26758b821e90")?),
-        value:U256::from(15000),
+    let tx_par = web3::types::TransactionParameters {
+        nonce: Some(U256::from(10)),
+        to: Some(H160::from_str(
+            "0x41c90c049a15d5ef5af136653ccd6f26758b821e90",
+        )?),
+        value: U256::from(15000),
         ..Default::default()
     };
-//    let accs = web3::api::Accounts::
-//    let res = web3::api::Accounts::sign_transaction(tx_par, hdw_keypair.0);
-    println!("hdw_addr: {:?}",hdw_addr);
-    println!("hdw_priv: {:?}",hdw_priv);
-    println!("hdw_keypair: {:?}",hdw_keypair);
+    //    let accs = web3::api::Accounts::
+    //    let res = web3::api::Accounts::sign_transaction(tx_par, hdw_keypair.0);
+    println!("hdw_addr: {:?}", hdw_addr);
+    println!("hdw_priv: {:?}", hdw_priv);
+    println!("hdw_keypair: {:?}", hdw_keypair);
     Ok("still not implemented".to_owned())
-
 }
 
-pub async fn privkey(
-    conf: &Settings,
-    i: u32,
-    crypto: &Crypto,
-) -> Result<(), Error> {
+pub async fn privkey(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(), Error> {
     let phrase = &conf.hd_phrase;
-    let mk= &conf.stl_master_key;
+    let mk = &conf.stl_master_key;
 
     let hdw = match crypto {
         Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&phrase)?),
@@ -451,9 +439,7 @@ pub async fn privkey(
 
     let addr_i = hdw.address(i as i32)?;
     let priv_k = hdw.private(i as i32)?;
-    println!("addr: {:?}",addr_i);
-    println!("priv: {:?}",priv_k);
+    println!("addr: {:?}", addr_i);
+    println!("priv: {:?}", priv_k);
     Ok(())
 }
-
-

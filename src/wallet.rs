@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use hex::ToHex;
 use ::sha256::digest;
 use bip39::Language;
 use bip39::{Mnemonic, Seed};
@@ -11,6 +10,7 @@ use bitcoin::{
     network::constants::Network,
     PublicKey,
 };
+use hex::ToHex;
 use secp256k1::Secp256k1;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
@@ -18,16 +18,17 @@ use sha3::{Digest, Keccak256};
 use std::sync::Arc;
 use web3::contract::{Contract, Options};
 use web3::types::{
-    Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256, Bytes,
+    Address, Bytes, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160,
+    H256, U256,
 };
 
-use bdk::{FeeRate, Wallet, SyncOptions, descriptor, SignOptions};
-use bdk::database::MemoryDatabase;
 use bdk::blockchain::ElectrumBlockchain;
+use bdk::database::MemoryDatabase;
 use bdk::electrum_client::{Client, ElectrumApi};
+use bdk::{descriptor, FeeRate, SignOptions, SyncOptions, Wallet};
 
-use bitcoin::consensus::serialize;
 use bdk::wallet::AddressIndex::New;
+use bitcoin::consensus::serialize;
 
 use crate::types::*;
 
@@ -74,12 +75,12 @@ impl HDWallet {
         }
     }
 
-    pub fn keypair(&self, index: i32) -> Result<(ExtendedPrivKey,ExtendedPubKey), Error> {
+    pub fn keypair(&self, index: i32) -> Result<(ExtendedPrivKey, ExtendedPubKey), Error> {
         match self {
             HDWallet::Ethereum(seed) => eth_keypair_by_index(seed, index),
             HDWallet::Tron(seed) => tron_keypair_by_index(seed, index),
             HDWallet::Stellar(master_key) => tron_keypair_by_index(&HDSeed::new("")?, index), //NTD
-            HDWallet::Bitcoin(_) => Err(Error::BitcoinNoSupport("keypair".to_string()))
+            HDWallet::Bitcoin(_) => Err(Error::BitcoinNoSupport("keypair".to_string())),
         }
     }
 
@@ -150,7 +151,7 @@ impl HDWallet {
                 tron_sweep_token(seed, index, addr, to, provider, Crypto::Tron).await
             }
             HDWallet::Stellar(seed) => Ok(H256::zero()),
-            HDWallet::Bitcoin(seed) => Ok(H256::zero())
+            HDWallet::Bitcoin(seed) => Ok(H256::zero()),
         }
     }
 }
@@ -231,20 +232,26 @@ fn tron_private_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
     Ok(pk.private_key.display_secret().to_string())
 }
 
-fn eth_keypair_by_index(seed: &HDSeed, index: i32) -> Result<(ExtendedPrivKey,ExtendedPubKey), Error> {
+fn eth_keypair_by_index(
+    seed: &HDSeed,
+    index: i32,
+) -> Result<(ExtendedPrivKey, ExtendedPubKey), Error> {
     let hd_path_str = format!("m/44'/60'/0'/0/{index}");
     let seed_m = Seed::new(&seed.mnemonic, "");
     let (pk, pubk) =
         get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
-    Ok((pk,pubk))
+    Ok((pk, pubk))
 }
 
-fn tron_keypair_by_index(seed: &HDSeed, index: i32) -> Result<(ExtendedPrivKey,ExtendedPubKey), Error> {
+fn tron_keypair_by_index(
+    seed: &HDSeed,
+    index: i32,
+) -> Result<(ExtendedPrivKey, ExtendedPubKey), Error> {
     let hd_path_str = format!("m/44'/195'/0'/0/{index}");
     let seed_m = Seed::new(&seed.mnemonic, "");
     let (pk, pubk) =
         get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
-    Ok((pk,pubk))
+    Ok((pk, pubk))
 }
 
 fn eth_public_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
@@ -530,16 +537,15 @@ async fn tron_sweep_main(
     let tx_object = TransactionParameters {
         to: Some(to),
         value: val_to_send,
-        nonce:Some(U256::from(11)),
+        nonce: Some(U256::from(11)),
         ..Default::default()
     };
     println!("all okay main 1");
     let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
     let tx_raw = "0a026ffa22086e06b4977c94304540908fb8e4a6315a67080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a1541279f93bc1feb8af89d3253c5471b823c26671a92121541c90c049a15d5ef5af136653ccd6f26758b821e9018a08d0670c3c5b4e4a631";
-    let signed_hex = 
-    println!("all okay main 2");
-    println!("signed: {:?}",signed.raw_transaction);
-    println!("signed_hex: {:?}",signed_hex);
+    let signed_hex = println!("all okay main 2");
+    println!("signed: {:?}", signed.raw_transaction);
+    println!("signed_hex: {:?}", signed_hex);
     Ok("aaaaaaaa".to_owned())
     //let result = web3
     //    .eth()
@@ -581,7 +587,7 @@ async fn eth_balance_token(
         balance_f,
         decimals,
         symbol,
-        address: token_addr.to_owned()
+        address: token_addr.to_owned(),
     };
     Ok(token_data)
 }
@@ -620,7 +626,7 @@ async fn tron_balance_token(
         balance_f,
         decimals,
         symbol,
-        address: token_addr_hex_p
+        address: token_addr_hex_p,
     };
     Ok(token_data)
 }
@@ -668,7 +674,7 @@ async fn stellar_balance_token(
                 address: addr.to_owned(),
             };
             Ok(token_data)
-            },
+        }
         Err(_) => {
             let token_data = TokenData {
                 balance,
@@ -678,7 +684,7 @@ async fn stellar_balance_token(
                 address: addr.to_owned(),
             };
             Ok(token_data)
-        } 
+        }
     }
 }
 
@@ -703,7 +709,9 @@ async fn eth_sweep_token(
         token_address,
         include_bytes!("../res/erc20.abi.json"),
     )?;
-    let balance_of: U256= contract.query("balanceOf", (addr,), None, Options::default(), None).await?;
+    let balance_of: U256 = contract
+        .query("balanceOf", (addr,), None, Options::default(), None)
+        .await?;
     println!("balance_of: {:?}", &balance_of);
     let gas_est = contract
         .estimate_gas("transfer", (to, balance_of), addr, Options::default())
@@ -745,7 +753,9 @@ async fn tron_sweep_token(
         token_address,
         include_bytes!("../res/erc20.abi.json"),
     )?;
-    let balance_of: U256= contract.query("balanceOf", (addr,), None, Options::default(), None).await?;
+    let balance_of: U256 = contract
+        .query("balanceOf", (addr,), None, Options::default(), None)
+        .await?;
     let gas_est = contract
         .estimate_gas("transfer", (to, balance_of), addr, Options::default())
         .await?;
@@ -758,10 +768,18 @@ async fn tron_sweep_token(
     println!("fee: {:?}", &fee);
     println!("all okay token 1");
     let token_call = contract
-        .call("transfer", (to, balance_of), addr,Options {nonce:Some(U256::from(10)),..Default::default()})
+        .call(
+            "transfer",
+            (to, balance_of),
+            addr,
+            Options {
+                nonce: Some(U256::from(10)),
+                ..Default::default()
+            },
+        )
         .await?;
     println!("all okay token 2");
-    println!("token_call: {:?}",token_call);
+    println!("token_call: {:?}", token_call);
     let signed_token_call = web3.accounts().sign(token_call, &prvk);
     println!("all okay token 3");
     println!("signed token call: {:?}", signed_token_call);
@@ -843,20 +861,19 @@ pub fn validate_tron_address(addr: String) -> bool {
     }
 }
 
-pub fn tron_to_hex(addr: &str) -> Result<String,Error> {
+pub fn tron_to_hex(addr: &str) -> Result<String, Error> {
     if addr.len() != 34 {
         Err(Error::TronToHexError(addr.to_owned()))
     } else {
         let mut bytes = base58::decode(&addr)?;
         bytes.split_off(bytes.len() - 4);
-        let hex_str : String  = bytes.encode_hex();
+        let hex_str: String = bytes.encode_hex();
         let hex = "0x".to_owned() + &hex_str[2..];
         println!("{addr}");
         println!("{hex}");
         Ok(hex)
-        }
+    }
 }
-
 
 fn bitcoin_address_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
     Ok("unimplemented".to_string())
@@ -872,15 +889,23 @@ async fn btc_sweep_main(
     let external_descriptor = "wpkh(tprv8ZgxMBicQKsPdy6LMhUtFHAgpocR8GC6QmwMSFpZs7h6Eziw3SpThFfczTDh5rW2krkqffa11UpX3XkeTTB2FvzZKWXqPY54Y6Rq4AQ5R8L/84'/1'/0'/0/*)";
     let internal_descriptor = "wpkh(tprv8ZgxMBicQKsPdy6LMhUtFHAgpocR8GC6QmwMSFpZs7h6Eziw3SpThFfczTDh5rW2krkqffa11UpX3XkeTTB2FvzZKWXqPY54Y6Rq4AQ5R8L/84'/1'/0'/1/*)";
     //TODO -- descriptors should be created from HD seed.
-    let wallet = Wallet::new(external_descriptor, Some(internal_descriptor), bdk::bitcoin::Network::Testnet, MemoryDatabase::default()).unwrap();
+    let wallet = Wallet::new(
+        external_descriptor,
+        Some(internal_descriptor),
+        bdk::bitcoin::Network::Testnet,
+        MemoryDatabase::default(),
+    )
+    .unwrap();
     let s_addr = bdk::bitcoin::Address::from_str(to_str).unwrap();
-     let mut tx_builder = wallet.build_tx();     
-     tx_builder.add_recipient(s_addr.script_pubkey(), 10000 ).enable_rbf();
-     let mut psbt = tx_builder.finish().unwrap();     
-     let finalized = wallet.sign(&mut psbt.0, SignOptions::default()).unwrap();
-     assert!(finalized);     
-     let tx = psbt.0.extract_tx();
-     client.transaction_broadcast(&tx).unwrap();     
-     println!("Tx broadcasted! Txid: {}", tx.txid());
+    let mut tx_builder = wallet.build_tx();
+    tx_builder
+        .add_recipient(s_addr.script_pubkey(), 10000)
+        .enable_rbf();
+    let mut psbt = tx_builder.finish().unwrap();
+    let finalized = wallet.sign(&mut psbt.0, SignOptions::default()).unwrap();
+    assert!(finalized);
+    let tx = psbt.0.extract_tx();
+    client.transaction_broadcast(&tx).unwrap();
+    println!("Tx broadcasted! Txid: {}", tx.txid());
     Ok(tx.txid().to_string())
 }

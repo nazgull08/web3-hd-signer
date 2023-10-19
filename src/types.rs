@@ -2,7 +2,7 @@ use serde_derive::Deserialize;
 use web3::types::{H256, U256};
 
 use clap::{Parser, Subcommand, ValueEnum};
-use std::{sync::Arc, fmt::Display};
+use std::{fmt::Display, sync::Arc};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -41,7 +41,6 @@ pub enum Error {
     TronToHexError(String),
     #[error("Btc implementation does not support this action yet")]
     BitcoinNoSupport(String),
-
 }
 
 #[derive(Debug, Clone)]
@@ -78,17 +77,21 @@ pub struct Settings {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    Balance{c: u32},
+    Balance {
+        c: u32,
+    },
     Balances {
         c_from: Option<u32>,
         c_to: Option<u32>,
     },
     Refill,
     Sweep {
-        c: u32
+        c: u32,
     },
     GenPhrase,
-    PrivKey{c: u32}
+    PrivKey {
+        c: u32,
+    },
 }
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -98,7 +101,7 @@ pub enum Crypto {
     Polygon,
     BSC,
     Stellar,
-    Btc
+    Btc,
 }
 
 #[derive(Debug, Clone)]

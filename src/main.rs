@@ -37,10 +37,10 @@ async fn main() -> Result<(), Error> {
         .try_deserialize::<Settings>()?;
     let crypto = args.crypto;
     match args.command {
-        Commands::Balance {c} =>{
-            let b = balance(&conf,c,&crypto).await?;
-            println!("{:?}",b);
-        },
+        Commands::Balance { c } => {
+            let b = balance(&conf, c, &crypto).await?;
+            println!("{:?}", b);
+        }
         Commands::Balances {
             c_from: o_c_from,
             c_to: o_c_to,
@@ -54,29 +54,36 @@ async fn main() -> Result<(), Error> {
                 println!("================================");
                 println!("{:?}", b);
             }
-        },
+        }
         Commands::Refill => {
             println!("Implement refill...");
-        },
-        Commands::Sweep{c} => {
+        }
+        Commands::Sweep { c } => {
             let b = balance(&conf, c, &crypto).await?;
             match b.state {
-                BalanceState::Empty => {println!("nothing to sweep")},
-                BalanceState::Main { balance } => { sweep_main(conf, c, crypto).await?; },
+                BalanceState::Empty => {
+                    println!("nothing to sweep")
+                }
+                BalanceState::Main { balance } => {
+                    sweep_main(conf, c, crypto).await?;
+                }
                 BalanceState::Tokens { tokens_balance } => {
                     sweep_tokens(&conf, c, &crypto, tokens_balance).await?;
-                },
-                BalanceState::TokensMain { tokens_balance, balance } => { 
+                }
+                BalanceState::TokensMain {
+                    tokens_balance,
+                    balance,
+                } => {
                     sweep_tokens(&conf, c, &crypto, tokens_balance).await?;
-                    sweep_main(conf, c, crypto).await?; 
-                },
+                    sweep_main(conf, c, crypto).await?;
+                }
             };
-        },
+        }
         Commands::GenPhrase => {
             generate_hd_prase().await;
         }
-        Commands::PrivKey{c}=> {
-            let b = privkey(&conf,c,&crypto).await?;
+        Commands::PrivKey { c } => {
+            let b = privkey(&conf, c, &crypto).await?;
         }
     };
     Ok(())
