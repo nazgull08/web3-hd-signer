@@ -18,21 +18,17 @@ use sha3::{Digest, Keccak256};
 use std::sync::Arc;
 use web3::contract::{Contract, Options};
 use web3::types::{
-    Address, Bytes, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160,
+    Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160,
     H256, U256,
 };
 
-use bdk::blockchain::ElectrumBlockchain;
 use bdk::database::MemoryDatabase;
 use bdk::electrum_client::{Client, ElectrumApi};
-use bdk::{descriptor, FeeRate, SignOptions, SyncOptions, Wallet};
-
-use bdk::wallet::AddressIndex::New;
-use bitcoin::consensus::serialize;
+use bdk::{SignOptions, Wallet};
 
 use crate::types::*;
 
-use stellar_sdk::{types::Asset, utils::Endpoint, CallBuilder, Keypair, Server};
+use stellar_sdk::{utils::Endpoint, CallBuilder, Keypair, Server};
 
 #[derive(Debug, Clone)]
 pub enum HDWallet {
@@ -661,7 +657,7 @@ async fn stellar_balance_token(
                                 None => 0.,
                                 Some(a) => a.parse()?,
                             };
-                            balance = U256::from((balance_f * 1_000_000_00.0) as u128);
+                            balance = U256::from((balance_f * 100_000_000.0) as u128);
                         }
                     }
                 }

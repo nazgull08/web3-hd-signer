@@ -1,7 +1,5 @@
-use bitcoin::PrivateKey;
-use secp256k1::Secp256k1;
 use std::{str::FromStr, thread, time};
-use web3::types::{H160, H256, U256};
+use web3::types::{H160, U256};
 
 use crate::{
     types::*,
@@ -70,10 +68,10 @@ pub async fn balances(
         let mut tokens_b: bool = false;
         let mut main_b: bool = false;
         let addr_i = hdw.address(i as i32)?;
-        let (m_bal, m_bal_f, m_bal_usd) =
+        let (m_bal, _m_bal_f, _m_bal_usd) =
             check_main_balance(&hdw, i as i32, &provider, decimals, rate).await?;
         let tokens_bal = check_tokens_balance(&hdw, i as i32, &provider, &tokens).await?;
-        let (tx_fee, txo_fee_prep) = check_fee(&hdw, &provider, decimals).await?;
+        let (tx_fee, _txo_fee_prep) = check_fee(&hdw, &provider, decimals).await?;
         let mut tokens_bals = vec![];
         for t in tokens_bal {
             if t.balance > U256::zero() {
