@@ -18,12 +18,12 @@ pub async fn balances(
     let mk = &conf.stl_master_key;
 
     let hdw = match crypto {
-        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&phrase)?),
-        Crypto::Tron => HDWallet::Tron(HDSeed::new(&phrase)?),
-        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&phrase)?),
-        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&phrase)?),
+        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Tron => HDWallet::Tron(HDSeed::new(phrase)?),
+        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(&phrase)?),
+        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
     };
 
     let empty = vec![];
@@ -69,9 +69,9 @@ pub async fn balances(
         let mut main_b: bool = false;
         let addr_i = hdw.address(i as i32)?;
         let (m_bal, _m_bal_f, _m_bal_usd) =
-            check_main_balance(&hdw, i as i32, &provider, decimals, rate).await?;
-        let tokens_bal = check_tokens_balance(&hdw, i as i32, &provider, &tokens).await?;
-        let (tx_fee, _txo_fee_prep) = check_fee(&hdw, &provider, decimals).await?;
+            check_main_balance(&hdw, i as i32, provider, decimals, rate).await?;
+        let tokens_bal = check_tokens_balance(&hdw, i as i32, provider, tokens).await?;
+        let (tx_fee, _txo_fee_prep) = check_fee(&hdw, provider, decimals).await?;
         let mut tokens_bals = vec![];
         for t in tokens_bal {
             if t.balance > U256::zero() {
@@ -119,12 +119,12 @@ pub async fn balance(conf: &Settings, i: u32, crypto: &Crypto) -> Result<WalletS
     let mk = &conf.stl_master_key;
 
     let hdw = match crypto {
-        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&phrase)?),
-        Crypto::Tron => HDWallet::Tron(HDSeed::new(&phrase)?),
-        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&phrase)?),
-        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&phrase)?),
+        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Tron => HDWallet::Tron(HDSeed::new(phrase)?),
+        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(&phrase)?),
+        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
     };
 
     let empty = vec![];
@@ -166,10 +166,10 @@ pub async fn balance(conf: &Settings, i: u32, crypto: &Crypto) -> Result<WalletS
     let mut tokens_b: bool = false;
     let mut main_b: bool = false;
     let addr_i = hdw.address(i as i32)?;
-    let (m_bal, m_bal_f, m_bal_usd) =
-        check_main_balance(&hdw, i as i32, &provider, decimals, rate).await?;
-    let tokens_bal = check_tokens_balance(&hdw, i as i32, &provider, &tokens).await?;
-    let (tx_fee, txo_fee_prep) = check_fee(&hdw, &provider, decimals).await?;
+    let (m_bal, _m_bal_f, _m_bal_usd) =
+        check_main_balance(&hdw, i as i32, provider, decimals, rate).await?;
+    let tokens_bal = check_tokens_balance(&hdw, i as i32, provider, tokens).await?;
+    let (tx_fee, _txo_fee_prep) = check_fee(&hdw, provider, decimals).await?;
     let mut tokens_bals = vec![];
     for t in tokens_bal {
         if t.balance > U256::zero() {
@@ -211,7 +211,7 @@ async fn check_fee(hdw: &HDWallet, provider: &str, decimals: U256) -> Result<(U2
     match hdw {
         HDWallet::Stellar(_) => Ok((U256::zero(), 0.0)),
         _ => {
-            let g_price = gas_price(&provider).await?;
+            let g_price = gas_price(provider).await?;
             let tx_fee: U256 = g_price * 21000 * 5;
             let tx_fee_prep = (tx_fee / decimals).as_u128() as f64 * 0.01;
             Ok((tx_fee, tx_fee_prep))
@@ -223,7 +223,7 @@ async fn check_fee_token(hdw: &HDWallet, provider: &str) -> Result<U256, Error> 
     match hdw {
         HDWallet::Stellar(_) => Ok(U256::zero()),
         _ => {
-            let g_price = gas_price(&provider).await?;
+            let g_price = gas_price(provider).await?;
             let tx_fee: U256 = g_price * 65000 * 2;
             Ok(tx_fee)
         }
@@ -347,20 +347,20 @@ pub async fn sweep_tokens(
     };
     let addr = hdw.address(i as i32)?;
     println!("Sweeping from {0} in {1}...", &addr, crypto);
-    let balance = hdw.balance(i as i32, &provider).await?;
-    let fee = check_fee_token(&hdw, &provider).await? * tokens.len();
+    let balance = hdw.balance(i as i32, provider).await?;
+    let fee = check_fee_token(&hdw, provider).await? * tokens.len();
     if balance < fee {
         let val = fee - balance;
         println!(
             "Balance: {0}, fee {1}, refilling for {2}",
             balance, fee, val
         );
-        refill_address(&conf.sweeper, &addr, val, &provider).await?;
+        refill_address(&conf.sweeper, &addr, val, provider).await?;
     };
     for (tok, _) in tokens {
         println!("token_addr: {:?}", &tok);
         println!("tok: {tok}");
-        let hash = hdw.sweep_token(i as i32, &tok, &to, &provider).await?;
+        let hash = hdw.sweep_token(i as i32, &tok, to, provider).await?;
         println!("sweeped: {:?}", hash);
         let mut info = tx_info(hash, provider).await?;
         while info.transaction_index.is_none() {
@@ -401,12 +401,12 @@ pub async fn refill_address(
 }
 
 pub fn tron_call(conf: &Settings, i: i32) -> Result<String, Error> {
-    let tx_raw = "0a026ffa22086e06b4977c94304540908fb8e4a6315a67080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a1541279f93bc1feb8af89d3253c5471b823c26671a92121541c90c049a15d5ef5af136653ccd6f26758b821e9018a08d0670c3c5b4e4a631";
+    let _tx_raw = "0a026ffa22086e06b4977c94304540908fb8e4a6315a67080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a1541279f93bc1feb8af89d3253c5471b823c26671a92121541c90c049a15d5ef5af136653ccd6f26758b821e9018a08d0670c3c5b4e4a631";
     let hdw = HDWallet::Tron(HDSeed::new(&conf.hd_phrase)?);
     let hdw_addr = hdw.address(i)?;
     let hdw_priv = hdw.private(i)?;
     let hdw_keypair = hdw.keypair(i)?;
-    let tx_par = web3::types::TransactionParameters {
+    let _tx_par = web3::types::TransactionParameters {
         nonce: Some(U256::from(10)),
         to: Some(H160::from_str(
             "0x41c90c049a15d5ef5af136653ccd6f26758b821e90",
@@ -427,12 +427,12 @@ pub async fn privkey(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(), Err
     let mk = &conf.stl_master_key;
 
     let hdw = match crypto {
-        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(&phrase)?),
-        Crypto::Tron => HDWallet::Tron(HDSeed::new(&phrase)?),
-        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&phrase)?),
-        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&phrase)?),
+        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Tron => HDWallet::Tron(HDSeed::new(phrase)?),
+        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(&phrase)?),
+        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
     };
 
     let addr_i = hdw.address(i as i32)?;

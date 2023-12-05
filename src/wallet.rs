@@ -46,7 +46,7 @@ pub struct HDSeed {
 impl HDSeed {
     pub fn new(phrase: &str) -> Result<Self, Error> {
         let mnemonic = Mnemonic::from_phrase(phrase, Language::English)
-            .map_err(|e| Error::MnemonicError(phrase.to_owned()))?;
+            .map_err(|_| Error::MnemonicError(phrase.to_owned()))?;
         Ok(HDSeed { mnemonic })
     }
 }
@@ -75,7 +75,7 @@ impl HDWallet {
         match self {
             HDWallet::Ethereum(seed) => eth_keypair_by_index(seed, index),
             HDWallet::Tron(seed) => tron_keypair_by_index(seed, index),
-            HDWallet::Stellar(master_key) => tron_keypair_by_index(&HDSeed::new("")?, index), //NTD
+            HDWallet::Stellar(_master_key) => tron_keypair_by_index(&HDSeed::new("")?, index), //NTD
             HDWallet::Bitcoin(_) => Err(Error::BitcoinNoSupport("keypair".to_string())),
         }
     }
@@ -127,7 +127,7 @@ impl HDWallet {
         match self {
             HDWallet::Ethereum(seed) => eth_sweep_main(seed, index, to, provider).await,
             HDWallet::Tron(seed) => tron_sweep_main(seed, index, to, provider).await,
-            HDWallet::Stellar(master_key) => Ok("unimplemented".to_owned()),
+            HDWallet::Stellar(_master_key) => Ok("unimplemented".to_owned()),
             HDWallet::Bitcoin(seed) => eth_sweep_main(seed, index, to, provider).await,
         }
     }
@@ -146,8 +146,8 @@ impl HDWallet {
             HDWallet::Tron(seed) => {
                 tron_sweep_token(seed, index, addr, to, provider, Crypto::Tron).await
             }
-            HDWallet::Stellar(seed) => Ok(H256::zero()),
-            HDWallet::Bitcoin(seed) => Ok(H256::zero()),
+            HDWallet::Stellar(_seed) => Ok(H256::zero()),
+            HDWallet::Bitcoin(_seed) => Ok(H256::zero()),
         }
     }
 }
@@ -195,7 +195,7 @@ fn tron_address_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
     let seed_m = Seed::new(&seed.mnemonic, "");
     let (_pk, pubk) =
         get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
-    Ok(extended_pubk_to_addr_tron(&pubk)?)
+    extended_pubk_to_addr_tron(&pubk)
 }
 
 fn tron_address_by_index_hex(seed: &HDSeed, index: i32) -> Result<String, Error> {
@@ -203,11 +203,11 @@ fn tron_address_by_index_hex(seed: &HDSeed, index: i32) -> Result<String, Error>
     let seed_m = Seed::new(&seed.mnemonic, "");
     let (_pk, pubk) =
         get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
-    Ok(extended_pubk_to_addr_tron_hex(&pubk)?)
+    extended_pubk_to_addr_tron_hex(&pubk)
 }
 //Add proper version with HD seed for Stellar wallet. But later...
 fn stellar_address_by_index(seed: &str, index: i32) -> Result<String, Error> {
-    let seed_m = Keypair::from_secret_master_key(&seed, &index.to_string())
+    let seed_m = Keypair::from_secret_master_key(seed, &index.to_string())
         .map_err(|e| Error::StellarSDKError(Arc::new(e)))?;
     Ok(seed_m.public_key())
 }
@@ -290,7 +290,7 @@ fn extended_pubk_to_addr(pubk: &ExtendedPubKey) -> Result<EthAddr, Error> {
     //keep last 20 bytes of the result
     let addr = &addr[(addr.len() - 40)..];
     //massage into domain unit
-    Ok(EthAddr::new(addr)?)
+    EthAddr::new(addr)
 }
 
 pub fn partial_address_to_addr_tron(partial_address: &str) -> Result<String, Error> {
@@ -538,10 +538,10 @@ async fn tron_sweep_main(
     };
     println!("all okay main 1");
     let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
-    let tx_raw = "0a026ffa22086e06b4977c94304540908fb8e4a6315a67080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a1541279f93bc1feb8af89d3253c5471b823c26671a92121541c90c049a15d5ef5af136653ccd6f26758b821e9018a08d0670c3c5b4e4a631";
-    let signed_hex = println!("all okay main 2");
+    let _tx_raw = "0a026ffa22086e06b4977c94304540908fb8e4a6315a67080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a1541279f93bc1feb8af89d3253c5471b823c26671a92121541c90c049a15d5ef5af136653ccd6f26758b821e9018a08d0670c3c5b4e4a631";
+    println!("all okay main 2");
     println!("signed: {:?}", signed.raw_transaction);
-    println!("signed_hex: {:?}", signed_hex);
+    println!("signed_hex: {:?}", "main2");
     Ok("aaaaaaaa".to_owned())
     //let result = web3
     //    .eth()
@@ -652,7 +652,7 @@ async fn stellar_balance_token(
                     None => {}
                     Some(asset) => {
                         if asset == addr {
-                            symbol = (asset.split(":").next()).unwrap_or(" ").to_owned();
+                            symbol = (asset.split(':').next()).unwrap_or(" ").to_owned();
                             balance_f = match o.amount.clone() {
                                 None => 0.,
                                 Some(a) => a.parse()?,
@@ -861,8 +861,8 @@ pub fn tron_to_hex(addr: &str) -> Result<String, Error> {
     if addr.len() != 34 {
         Err(Error::TronToHexError(addr.to_owned()))
     } else {
-        let mut bytes = base58::decode(&addr)?;
-        bytes.split_off(bytes.len() - 4);
+        let mut bytes = base58::decode(addr)?;
+        let _a = bytes.split_off(bytes.len() - 4);
         let hex_str: String = bytes.encode_hex();
         let hex = "0x".to_owned() + &hex_str[2..];
         println!("{addr}");
@@ -871,13 +871,15 @@ pub fn tron_to_hex(addr: &str) -> Result<String, Error> {
     }
 }
 
-fn bitcoin_address_by_index(seed: &HDSeed, index: i32) -> Result<String, Error> {
+fn bitcoin_address_by_index(_: &HDSeed, _: i32) -> Result<String, Error> {
     Ok("unimplemented".to_string())
 }
 
+
+#[allow(dead_code)]
 async fn btc_sweep_main(
-    seed: &HDSeed,
-    index: i32,
+    _seed: &HDSeed,
+    _index: i32,
     to_str: &str,
     provider: &str,
 ) -> Result<String, Error> {

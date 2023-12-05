@@ -64,7 +64,7 @@ async fn main() -> Result<(), Error> {
                 BalanceState::Empty => {
                     println!("nothing to sweep")
                 }
-                BalanceState::Main { balance } => {
+                BalanceState::Main { balance: _} => {
                     sweep_main(conf, c, crypto).await?;
                 }
                 BalanceState::Tokens { tokens_balance } => {
@@ -72,7 +72,7 @@ async fn main() -> Result<(), Error> {
                 }
                 BalanceState::TokensMain {
                     tokens_balance,
-                    balance,
+                    balance: _,
                 } => {
                     sweep_tokens(&conf, c, &crypto, tokens_balance).await?;
                     sweep_main(conf, c, crypto).await?;
@@ -83,12 +83,13 @@ async fn main() -> Result<(), Error> {
             generate_hd_prase().await;
         }
         Commands::PrivKey { c } => {
-            let b = privkey(&conf, c, &crypto).await?;
+            privkey(&conf, c, &crypto).await?;
         }
     };
     Ok(())
 }
 
+#[allow(dead_code)]
 async fn refill_all(
     sweeper_prvk: &str,
     main_addrs: Vec<WalletAddress>,
