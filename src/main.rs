@@ -64,7 +64,7 @@ async fn main() -> Result<(), Error> {
                 BalanceState::Empty => {
                     println!("nothing to sweep")
                 }
-                BalanceState::Main { balance: _} => {
+                BalanceState::Main { balance: _ } => {
                     sweep_main(conf, c, crypto).await?;
                 }
                 BalanceState::Tokens { tokens_balance } => {

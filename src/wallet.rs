@@ -18,8 +18,7 @@ use sha3::{Digest, Keccak256};
 use std::sync::Arc;
 use web3::contract::{Contract, Options};
 use web3::types::{
-    Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160,
-    H256, U256,
+    Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256,
 };
 
 use bdk::database::MemoryDatabase;
@@ -874,7 +873,6 @@ pub fn tron_to_hex(addr: &str) -> Result<String, Error> {
 fn bitcoin_address_by_index(_: &HDSeed, _: i32) -> Result<String, Error> {
     Ok("unimplemented".to_string())
 }
-
 
 #[allow(dead_code)]
 async fn btc_sweep_main(
