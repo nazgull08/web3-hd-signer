@@ -92,6 +92,10 @@ pub enum Commands {
     PrivKey {
         c: u32,
     },
+    DebugSend{
+        c_from: u32,
+        c_to: String,
+    }
 }
 
 #[derive(ValueEnum, Debug, Clone)]

@@ -1423,6 +1423,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "opentron"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f873e477c141c97aa52a2b95f173eddb6bff9ddbf9fb5f398254876a78a0cc1"
+
+[[package]]
 name = "ordered-multimap"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2883,6 +2889,7 @@ dependencies = [
  "eth_checksum",
  "hex",
  "log",
+ "opentron",
  "protobuf",
  "reqwest",
  "rustc-hex",

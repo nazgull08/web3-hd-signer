@@ -422,7 +422,7 @@ pub fn tron_call(conf: &Settings, i: i32) -> Result<String, Error> {
     Ok("still not implemented".to_owned())
 }
 
-pub async fn privkey(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(), Error> {
+pub async fn privkey_print(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(), Error> {
     let phrase = &conf.hd_phrase;
     let mk = &conf.stl_master_key;
 
@@ -440,4 +440,38 @@ pub async fn privkey(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(), Err
     println!("addr: {:?}", addr_i);
     println!("priv: {:?}", priv_k);
     Ok(())
+}
+
+pub async fn privkey(conf: &Settings, i: u32, crypto: &Crypto) -> Result<String, Error> {
+    let phrase = &conf.hd_phrase;
+    let mk = &conf.stl_master_key;
+
+    let hdw = match crypto {
+        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Tron => HDWallet::Tron(HDSeed::new(phrase)?),
+        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
+        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
+    };
+
+    hdw.private(i as i32)
+}
+
+pub async fn debug_send(conf: &Settings, c_from: u32, c_to: String, crypto: &Crypto) -> Result<String, Error> {
+    let phrase = &conf.hd_phrase;
+    let mk = &conf.stl_master_key;
+
+    let hdw = match crypto {
+        Crypto::Eth => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Tron => HDWallet::Tron(HDSeed::new(phrase)?),
+        Crypto::BSC => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(phrase)?),
+        Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
+        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
+    };
+
+    let pk = hdw.private(c_from as i32);
+
+    Ok("werwe".to_string())
 }
