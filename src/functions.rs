@@ -458,7 +458,12 @@ pub async fn privkey(conf: &Settings, i: u32, crypto: &Crypto) -> Result<String,
     hdw.private(i as i32)
 }
 
-pub async fn debug_send(conf: &Settings, c_from: u32, c_to: String, crypto: &Crypto) -> Result<String, Error> {
+pub async fn debug_send(
+    conf: &Settings,
+    c_from: u32,
+    c_to: String,
+    crypto: &Crypto,
+) -> Result<String, Error> {
     let phrase = &conf.hd_phrase;
     let mk = &conf.stl_master_key;
 

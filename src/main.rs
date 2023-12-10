@@ -85,7 +85,7 @@ async fn main() -> Result<(), Error> {
         Commands::PrivKey { c } => {
             privkey_print(&conf, c, &crypto).await?;
         }
-        Commands::DebugSend { c_from, c_to} => {
+        Commands::DebugSend { c_from, c_to } => {
             let debug_send_resp = debug_send(&conf, c_from, c_to, &crypto).await?;
         }
     };
