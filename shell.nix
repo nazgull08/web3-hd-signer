@@ -7,6 +7,7 @@ in stdenv.mkDerivation rec {
   buildInputs = [
     rustup
     openssl
+    cmake
   ];
   shellHook = ''
   export OPENSSL_DIR="${merged-openssl}"

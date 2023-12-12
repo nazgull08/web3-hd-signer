@@ -4,7 +4,7 @@ use web3::types::{H160, U256};
 
 use crate::{
     types::*,
-    wallet::{gas_price, send_main, tx_info, HDSeed, HDWallet, tron_to_hex},
+    wallet::{gas_price, send_main, tx_info, HDSeed, HDWallet, tron_to_hex}, tron::transfer_trx,
 };
 
 pub async fn balances(
@@ -500,6 +500,7 @@ pub async fn debug_send(
     println!("pubkey_1: {:?}",from_pub_1);
     println!("=================================");
     
+    transfer_trx().await;
 
     Ok("werwe".to_string())
 }

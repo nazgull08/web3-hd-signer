@@ -2,6 +2,7 @@ pub mod functions;
 pub mod tron;
 pub mod types;
 pub mod wallet;
+pub mod tron_grpc;
 
 #[cfg(test)]
 mod tests {
