@@ -1,9 +1,10 @@
 use std::{str::FromStr, thread, time};
+use anychain_tron::{TronTransaction, protocol::Tron::{Transaction, Account}};
 use web3::types::{H160, U256};
 
 use crate::{
     types::*,
-    wallet::{gas_price, send_main, tx_info, HDSeed, HDWallet},
+    wallet::{gas_price, send_main, tx_info, HDSeed, HDWallet, tron_to_hex},
 };
 
 pub async fn balances(
@@ -475,8 +476,30 @@ pub async fn debug_send(
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
         Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
     };
+    let tr_acc = Account::new();
 
-    let pk = hdw.private(c_from as i32);
+    let trx = Transaction::new();
+
+    let pk = hdw.private(c_from as i32)?;
+    let from = hdw.address(c_from as i32)?;
+    let from_hex= hdw.address(c_from as i32)?;
+    let from_pub= hdw.public(c_from as i32)?;
+
+    let pk_1 = hdw.private((c_from+1) as i32)?;
+    let from_1 = hdw.address((c_from+1) as i32)?;
+    let from_pub_1= hdw.public((c_from+1) as i32)?;
+    println!("=================================");
+    println!("pk: {:?}",pk);
+    println!("addr: {:?}",from);
+    println!("addr_hex: {:?}",tron_to_hex(&from));
+    println!("pubkey: {:?}",from_pub);
+    println!("=================================");
+    println!("pk_1: {:?}",pk_1);
+    println!("addr_1: {:?}",from_1);
+    println!("addr_hex: {:?}",tron_to_hex(&from_1));
+    println!("pubkey_1: {:?}",from_pub_1);
+    println!("=================================");
+    
 
     Ok("werwe".to_string())
 }

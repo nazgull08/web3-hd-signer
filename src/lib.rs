@@ -1,4 +1,5 @@
 pub mod functions;
+pub mod tron;
 pub mod types;
 pub mod wallet;
 
