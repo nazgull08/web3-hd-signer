@@ -4,7 +4,7 @@ use web3::types::{H160, U256};
 
 use crate::{
     types::*,
-    wallet::{gas_price, send_main, tx_info, HDSeed, HDWallet, tron_to_hex}, tron::transfer_trx,
+    wallet::{gas_price, send_main, tx_info, HDSeed, HDWallet, tron_to_hex, tron_to_hex_raw}, tron::calls::{test_transfer_trx, transfer_trx, transfer_trc20},
 };
 
 pub async fn balances(
@@ -482,25 +482,16 @@ pub async fn debug_send(
 
     let pk = hdw.private(c_from as i32)?;
     let from = hdw.address(c_from as i32)?;
-    let from_hex= hdw.address(c_from as i32)?;
+    let from_hex= tron_to_hex_raw(&hdw.address(c_from as i32)?)?;
     let from_pub= hdw.public(c_from as i32)?;
 
     let pk_1 = hdw.private((c_from+1) as i32)?;
-    let from_1 = hdw.address((c_from+1) as i32)?;
+    let from_1_hex= tron_to_hex_raw(&hdw.address((c_from+1) as i32)?)?;
     let from_pub_1= hdw.public((c_from+1) as i32)?;
-    println!("=================================");
-    println!("pk: {:?}",pk);
-    println!("addr: {:?}",from);
-    println!("addr_hex: {:?}",tron_to_hex(&from));
-    println!("pubkey: {:?}",from_pub);
-    println!("=================================");
-    println!("pk_1: {:?}",pk_1);
-    println!("addr_1: {:?}",from_1);
-    println!("addr_hex: {:?}",tron_to_hex(&from_1));
-    println!("pubkey_1: {:?}",from_pub_1);
-    println!("=================================");
-    
-    transfer_trx().await;
+    let contract_addr = conf.tron_tokens[0].clone();
+
+    //transfer_trx(&from_hex, &from_1_hex, &pk, 23456).await;
+    transfer_trc20(&from_hex, &from_1_hex, &pk, 154321, &contract_addr).await;
 
     Ok("werwe".to_string())
 }

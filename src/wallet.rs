@@ -864,9 +864,18 @@ pub fn tron_to_hex(addr: &str) -> Result<String, Error> {
         let _a = bytes.split_off(bytes.len() - 4);
         let hex_str: String = bytes.encode_hex();
         let hex = "0x".to_owned() + &hex_str[2..];
-        println!("{addr}");
-        println!("{hex}");
         Ok(hex)
+    }
+}
+
+pub fn tron_to_hex_raw(addr: &str) -> Result<String, Error> {
+    if addr.len() != 34 {
+        Err(Error::TronToHexError(addr.to_owned()))
+    } else {
+        let mut bytes = base58::decode(addr)?;
+        let _a = bytes.split_off(bytes.len() - 4);
+        let hex_str: String = bytes.encode_hex();
+        Ok(hex_str)
     }
 }
 
