@@ -1,10 +1,10 @@
 use std::{str::FromStr, thread, time};
-use anychain_tron::{TronTransaction, protocol::Tron::{Transaction, Account}};
 use web3::types::{H160, U256};
 
 use crate::{
+    tron::calls::{transfer_trc20, transfer_trx},
     types::*,
-    wallet::{gas_price, send_main, tx_info, HDSeed, HDWallet, tron_to_hex, tron_to_hex_raw}, tron::calls::{test_transfer_trx, transfer_trx, transfer_trc20},
+    wallet::{gas_price, send_main, tron_to_hex_raw, tx_info, HDSeed, HDWallet},
 };
 
 pub async fn balances(
@@ -462,7 +462,7 @@ pub async fn privkey(conf: &Settings, i: u32, crypto: &Crypto) -> Result<String,
 pub async fn debug_send(
     conf: &Settings,
     c_from: u32,
-    c_to: String,
+    _c_to: String,
     crypto: &Crypto,
 ) -> Result<String, Error> {
     let phrase = &conf.hd_phrase;
@@ -476,21 +476,13 @@ pub async fn debug_send(
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
         Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
     };
-    let tr_acc = Account::new();
-
-    let trx = Transaction::new();
-
     let pk = hdw.private(c_from as i32)?;
-    let from = hdw.address(c_from as i32)?;
-    let from_hex= tron_to_hex_raw(&hdw.address(c_from as i32)?)?;
-    let from_pub= hdw.public(c_from as i32)?;
+    let from_hex = tron_to_hex_raw(&hdw.address(c_from as i32)?)?;
 
-    let pk_1 = hdw.private((c_from+1) as i32)?;
-    let from_1_hex= tron_to_hex_raw(&hdw.address((c_from+1) as i32)?)?;
-    let from_pub_1= hdw.public((c_from+1) as i32)?;
+    let from_1_hex = tron_to_hex_raw(&hdw.address((c_from + 1) as i32)?)?;
     let contract_addr = conf.tron_tokens[0].clone();
 
-    //transfer_trx(&from_hex, &from_1_hex, &pk, 23456).await;
+    transfer_trx(&from_hex, &from_1_hex, &pk, 23456).await;
     transfer_trc20(&from_hex, &from_1_hex, &pk, 154321, &contract_addr).await;
 
     Ok("werwe".to_string())

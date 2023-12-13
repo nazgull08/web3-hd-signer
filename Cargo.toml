@@ -18,7 +18,6 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "^1.0.57"
-anychain-tron = "0.2.2"
 bdk = "0.28.2"
 bitcoin = "0.30.0"
 clap = { version = "^4.0", features = ["derive"] }
@@ -29,7 +28,6 @@ ethers = { features=["legacy","abigen"]}
 hex = "0.4.3"
 libsecp256k1 = "0.7.1"
 log = "^0.4.19"
-opentron = "0.1.0"
 reqwest = "^0.11.18"
 rustc-hex = "^2.1.0"
 secp256k1 = "0.27.0"

@@ -8,8 +8,8 @@ use hex::{FromHex, ToHex};
 use libsecp256k1::{Message, SecretKey};
 use sha2::{Digest, Sha256};
 
-use crate::tron::signature::Signature;
 use crate::tron::error::Error;
+use crate::tron::signature::Signature;
 
 /// Private key of Secp256k1.
 #[derive(PartialEq, Hash, Clone)]
