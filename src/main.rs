@@ -8,6 +8,9 @@ use web3_hd_signer::wallet::{gas_price, send_main, tx_info};
 
 use clap::Parser;
 
+use web3_hd_signer::balance::balance;
+use web3_hd_signer::balance::balances;
+use web3_hd_signer::error::Error;
 use web3_hd_signer::functions::*;
 use web3_hd_signer::types::*;
 

@@ -21,10 +21,7 @@ use web3::types::{
     Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256,
 };
 
-use bdk::database::MemoryDatabase;
-use bdk::electrum_client::{Client, ElectrumApi};
-use bdk::{SignOptions, Wallet};
-
+use crate::error::Error;
 use crate::types::*;
 
 use stellar_sdk::{utils::Endpoint, CallBuilder, Keypair, Server};
@@ -867,40 +864,4 @@ pub fn tron_to_hex_raw(addr: &str) -> Result<String, Error> {
         let hex_str: String = bytes.encode_hex();
         Ok(hex_str)
     }
-}
-
-fn bitcoin_address_by_index(_: &HDSeed, _: i32) -> Result<String, Error> {
-    Ok("unimplemented".to_string())
-}
-
-#[allow(dead_code)]
-async fn btc_sweep_main(
-    _seed: &HDSeed,
-    _index: i32,
-    to_str: &str,
-    provider: &str,
-) -> Result<String, Error> {
-    let client = Client::new(provider).unwrap();
-    let external_descriptor = "wpkh(tprv8ZgxMBicQKsPdy6LMhUtFHAgpocR8GC6QmwMSFpZs7h6Eziw3SpThFfczTDh5rW2krkqffa11UpX3XkeTTB2FvzZKWXqPY54Y6Rq4AQ5R8L/84'/1'/0'/0/*)";
-    let internal_descriptor = "wpkh(tprv8ZgxMBicQKsPdy6LMhUtFHAgpocR8GC6QmwMSFpZs7h6Eziw3SpThFfczTDh5rW2krkqffa11UpX3XkeTTB2FvzZKWXqPY54Y6Rq4AQ5R8L/84'/1'/0'/1/*)";
-    //TODO -- descriptors should be created from HD seed.
-    let wallet = Wallet::new(
-        external_descriptor,
-        Some(internal_descriptor),
-        bdk::bitcoin::Network::Testnet,
-        MemoryDatabase::default(),
-    )
-    .unwrap();
-    let s_addr = bdk::bitcoin::Address::from_str(to_str).unwrap();
-    let mut tx_builder = wallet.build_tx();
-    tx_builder
-        .add_recipient(s_addr.script_pubkey(), 10000)
-        .enable_rbf();
-    let mut psbt = tx_builder.finish().unwrap();
-    let finalized = wallet.sign(&mut psbt.0, SignOptions::default()).unwrap();
-    assert!(finalized);
-    let tx = psbt.0.extract_tx();
-    client.transaction_broadcast(&tx).unwrap();
-    println!("Tx broadcasted! Txid: {}", tx.txid());
-    Ok(tx.txid().to_string())
 }
