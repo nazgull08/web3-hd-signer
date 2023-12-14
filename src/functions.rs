@@ -24,10 +24,7 @@ pub async fn balances(
         Crypto::BSC => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
     };
-
-    let empty = vec![];
 
     let tokens = match crypto {
         Crypto::Eth => &conf.eth_tokens,
@@ -35,7 +32,6 @@ pub async fn balances(
         Crypto::BSC => &conf.bsc_tokens,
         Crypto::Polygon => &conf.plg_tokens,
         Crypto::Stellar => &conf.stl_tokens,
-        Crypto::Btc => &empty,
     };
     let provider = match crypto {
         Crypto::Eth => &conf.eth_provider,
@@ -43,7 +39,6 @@ pub async fn balances(
         Crypto::BSC => &conf.bsc_provider,
         Crypto::Polygon => &conf.plg_provider,
         Crypto::Stellar => &conf.stl_provider,
-        Crypto::Btc => &conf.btc_provider,
     };
     let rate = match crypto {
         Crypto::Eth => rates.eth,
@@ -51,7 +46,6 @@ pub async fn balances(
         Crypto::BSC => rates.bnb,
         Crypto::Polygon => rates.mtc,
         Crypto::Stellar => rates.xlm,
-        Crypto::Btc => rates.btc,
     };
 
     let decimals = match crypto {
@@ -60,7 +54,6 @@ pub async fn balances(
         Crypto::BSC => U256::exp10(16),
         Crypto::Polygon => U256::exp10(16),
         Crypto::Stellar => U256::exp10(16),
-        Crypto::Btc => U256::exp10(8),
     };
 
     let mut balance_states = vec![];
@@ -125,10 +118,7 @@ pub async fn balance(conf: &Settings, i: u32, crypto: &Crypto) -> Result<WalletS
         Crypto::BSC => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
     };
-
-    let empty = vec![];
 
     let tokens = match crypto {
         Crypto::Eth => &conf.eth_tokens,
@@ -136,7 +126,6 @@ pub async fn balance(conf: &Settings, i: u32, crypto: &Crypto) -> Result<WalletS
         Crypto::BSC => &conf.bsc_tokens,
         Crypto::Polygon => &conf.plg_tokens,
         Crypto::Stellar => &conf.stl_tokens,
-        Crypto::Btc => &empty,
     };
     let provider = match crypto {
         Crypto::Eth => &conf.eth_provider,
@@ -144,7 +133,6 @@ pub async fn balance(conf: &Settings, i: u32, crypto: &Crypto) -> Result<WalletS
         Crypto::BSC => &conf.bsc_provider,
         Crypto::Polygon => &conf.plg_provider,
         Crypto::Stellar => &conf.stl_provider,
-        Crypto::Btc => &conf.btc_provider,
     };
     let rate = match crypto {
         Crypto::Eth => rates.eth,
@@ -152,7 +140,6 @@ pub async fn balance(conf: &Settings, i: u32, crypto: &Crypto) -> Result<WalletS
         Crypto::BSC => rates.bnb,
         Crypto::Polygon => rates.mtc,
         Crypto::Stellar => rates.xlm,
-        Crypto::Btc => rates.btc,
     };
 
     let decimals = match crypto {
@@ -161,7 +148,6 @@ pub async fn balance(conf: &Settings, i: u32, crypto: &Crypto) -> Result<WalletS
         Crypto::BSC => U256::exp10(16),
         Crypto::Polygon => U256::exp10(16),
         Crypto::Stellar => U256::exp10(16),
-        Crypto::Btc => U256::exp10(8),
     };
 
     let mut tokens_b: bool = false;
@@ -261,7 +247,7 @@ async fn check_tokens_balance(
 pub async fn rates() -> Result<Rates, Error> {
     println!("getting current rates...");
     let rs: RatesRaw = reqwest::get(
-        "https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=ETH,TRX,MATIC,BNB,XLM,BTC",
+        "https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms=ETH,TRX,MATIC,BNB,XLM",
     )
     .await?
     .json::<RatesRaw>()
@@ -272,11 +258,10 @@ pub async fn rates() -> Result<Rates, Error> {
         mtc: 1. / rs.MATIC,
         bnb: 1. / rs.BNB,
         xlm: 1. / rs.XLM,
-        btc: 1. / rs.BTC,
     };
     println!(
-        "Rates:\nETH:{:.4}$\nTRX:{:.4}$\nMTC:{:.4}$\nBNB:{:.4}$\nXLM:{:.4}$\nBTC:{:.4}$\n",
-        rates.eth, rates.trx, rates.mtc, rates.bnb, rates.xlm, rates.btc
+        "Rates:\nETH:{:.4}$\nTRX:{:.4}$\nMTC:{:.4}$\nBNB:{:.4}$\nXLM:{:.4}$\n",
+        rates.eth, rates.trx, rates.mtc, rates.bnb, rates.xlm
     );
     Ok(rates)
 }
@@ -288,7 +273,6 @@ pub async fn sweep_main(conf: Settings, i: u32, crypto: Crypto) -> Result<(), Er
         Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&conf.hd_phrase)?),
         Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&conf.hd_phrase)?),
         Crypto::Stellar => HDWallet::Stellar(conf.stl_master_key),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(&conf.hd_phrase)?),
     };
     let provider = match crypto {
         Crypto::Eth => conf.eth_provider,
@@ -296,7 +280,6 @@ pub async fn sweep_main(conf: Settings, i: u32, crypto: Crypto) -> Result<(), Er
         Crypto::BSC => conf.bsc_provider,
         Crypto::Polygon => conf.plg_provider,
         Crypto::Stellar => conf.stl_provider,
-        Crypto::Btc => conf.btc_provider,
     };
     let to = match crypto {
         Crypto::Eth => conf.eth_safe,
@@ -304,7 +287,6 @@ pub async fn sweep_main(conf: Settings, i: u32, crypto: Crypto) -> Result<(), Er
         Crypto::BSC => conf.bsc_safe,
         Crypto::Polygon => conf.plg_safe,
         Crypto::Stellar => conf.stl_safe,
-        Crypto::Btc => conf.btc_safe,
     };
     println!(
         "Sweeping from {0} in {1}...",
@@ -328,7 +310,6 @@ pub async fn sweep_tokens(
         Crypto::BSC => HDWallet::Ethereum(HDSeed::new(&conf.hd_phrase)?),
         Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(&conf.hd_phrase)?),
         Crypto::Stellar => HDWallet::Stellar(conf.stl_master_key.to_owned()),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(&conf.hd_phrase)?),
     };
     let provider = match crypto {
         Crypto::Eth => &conf.eth_provider,
@@ -336,7 +317,6 @@ pub async fn sweep_tokens(
         Crypto::BSC => &conf.bsc_provider,
         Crypto::Polygon => &conf.plg_provider,
         Crypto::Stellar => &conf.stl_provider,
-        Crypto::Btc => &conf.btc_provider,
     };
     let to = match crypto {
         Crypto::Eth => &conf.eth_safe,
@@ -344,7 +324,6 @@ pub async fn sweep_tokens(
         Crypto::BSC => &conf.bsc_safe,
         Crypto::Polygon => &conf.plg_safe,
         Crypto::Stellar => &conf.stl_safe,
-        Crypto::Btc => &conf.btc_safe,
     };
     let addr = hdw.address(i as i32)?;
     println!("Sweeping from {0} in {1}...", &addr, crypto);
@@ -433,7 +412,6 @@ pub async fn privkey_print(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(
         Crypto::BSC => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
     };
 
     let addr_i = hdw.address(i as i32)?;
@@ -453,7 +431,6 @@ pub async fn privkey(conf: &Settings, i: u32, crypto: &Crypto) -> Result<String,
         Crypto::BSC => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
     };
 
     hdw.private(i as i32)
@@ -474,7 +451,6 @@ pub async fn debug_send(
         Crypto::BSC => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Polygon => HDWallet::Ethereum(HDSeed::new(phrase)?),
         Crypto::Stellar => HDWallet::Stellar(mk.to_owned()),
-        Crypto::Btc => HDWallet::Bitcoin(HDSeed::new(phrase)?),
     };
     let pk = hdw.private(c_from as i32)?;
     let from_hex = tron_to_hex_raw(&hdw.address(c_from as i32)?)?;

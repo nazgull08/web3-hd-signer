@@ -105,7 +105,6 @@ pub enum Crypto {
     Polygon,
     BSC,
     Stellar,
-    Btc,
 }
 
 #[derive(Debug, Clone)]
@@ -153,7 +152,6 @@ pub struct RatesRaw {
     pub MATIC: f64,
     pub BNB: f64,
     pub XLM: f64,
-    pub BTC: f64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -163,7 +161,6 @@ pub struct Rates {
     pub mtc: f64,
     pub bnb: f64,
     pub xlm: f64,
-    pub btc: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -183,7 +180,6 @@ impl Display for Crypto {
             Crypto::Polygon => f.write_str("Polygon"),
             Crypto::BSC => f.write_str("BSC"),
             Crypto::Stellar => f.write_str("Stellar"),
-            Crypto::Btc => f.write_str("Bitcoin"),
         }
     }
 }
