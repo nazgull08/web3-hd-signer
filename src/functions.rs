@@ -1,5 +1,5 @@
-use std::{str::FromStr, thread, time};
-use web3::types::{H160, U256};
+use std::{thread, time};
+use web3::types::U256;
 
 use crate::{
     error::Error,
@@ -121,28 +121,6 @@ pub async fn refill_address(
     println!("---------confirmed-----------");
     println!("{:?}", info);
     Ok(())
-}
-
-pub fn tron_call(conf: &Settings, i: i32) -> Result<String, Error> {
-    let _tx_raw = "0a026ffa22086e06b4977c94304540908fb8e4a6315a67080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a1541279f93bc1feb8af89d3253c5471b823c26671a92121541c90c049a15d5ef5af136653ccd6f26758b821e9018a08d0670c3c5b4e4a631";
-    let hdw = HDWallet::Tron(HDSeed::new(&conf.hd_phrase)?);
-    let hdw_addr = hdw.address(i)?;
-    let hdw_priv = hdw.private(i)?;
-    let hdw_keypair = hdw.keypair(i)?;
-    let _tx_par = web3::types::TransactionParameters {
-        nonce: Some(U256::from(10)),
-        to: Some(H160::from_str(
-            "0x41c90c049a15d5ef5af136653ccd6f26758b821e90",
-        )?),
-        value: U256::from(15000),
-        ..Default::default()
-    };
-    //    let accs = web3::api::Accounts::
-    //    let res = web3::api::Accounts::sign_transaction(tx_par, hdw_keypair.0);
-    println!("hdw_addr: {:?}", hdw_addr);
-    println!("hdw_priv: {:?}", hdw_priv);
-    println!("hdw_keypair: {:?}", hdw_keypair);
-    Ok("still not implemented".to_owned())
 }
 
 pub async fn privkey_print(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(), Error> {

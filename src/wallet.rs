@@ -56,6 +56,14 @@ impl HDWallet {
         }
     }
 
+    pub fn address_hex(&self, index: i32) -> Result<String, Error> {
+        match self {
+            HDWallet::Ethereum(seed) => eth_address_by_index(seed, index),
+            HDWallet::Tron(seed) => tron_address_by_index_hex(seed, index),
+            HDWallet::Stellar(master_key) => stellar_address_by_index(master_key, index),
+        }
+    }
+
     pub fn private(&self, index: i32) -> Result<String, Error> {
         match self {
             HDWallet::Ethereum(seed) => eth_private_by_index(seed, index),
@@ -77,14 +85,6 @@ impl HDWallet {
             HDWallet::Ethereum(seed) => eth_public_by_index(seed, index),
             HDWallet::Tron(seed) => tron_public_by_index(seed, index),
             HDWallet::Stellar(master_key) => stellar_address_by_index(master_key, index),
-        }
-    }
-
-    pub fn sign(&self, index: i32) -> Result<String, Error> {
-        match self {
-            HDWallet::Ethereum(seed) => eth_sign(seed, index),
-            HDWallet::Tron(seed) => tron_sign(seed, index),
-            HDWallet::Stellar(master_key) => stellar_sign(master_key, index),
         }
     }
 
@@ -375,25 +375,6 @@ fn get_private(
         .and_then(|k| k.derive_priv(&secp, hd_path))?;
     let pubk = ExtendedPubKey::from_priv(&secp, &pk);
     Ok((pk, pubk))
-}
-
-fn eth_sign(seed: &HDSeed, index: i32) -> Result<String, Error> {
-    let hd_path_str = format!("m/44'/60'/0'/0/{index}");
-    // let transport = web3::transports::Http::new("https://rinkeby.infura.io/v3/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")?;
-    //let web3 = web3::Web3::new(transport);
-    // let to = Address::from_str("0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX").unwrap();
-    let seed_m = Seed::new(&seed.mnemonic, "");
-    let (_privkey, pubk) =
-        get_extended_keypair(seed_m.as_bytes(), &DerivationPath::from_str(&hd_path_str)?)?;
-    Ok(pubk.public_key.to_string())
-}
-
-fn tron_sign(_seed: &HDSeed, _index: i32) -> Result<String, Error> {
-    Ok("lalala".to_owned())
-}
-
-fn stellar_sign(_seed: &str, _index: i32) -> Result<String, Error> {
-    Ok("lalala".to_owned())
 }
 
 async fn eth_balance(
