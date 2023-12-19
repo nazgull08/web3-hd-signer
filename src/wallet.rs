@@ -76,7 +76,7 @@ impl HDWallet {
         match self {
             HDWallet::Ethereum(seed) => eth_keypair_by_index(seed, index),
             HDWallet::Tron(seed) => tron_keypair_by_index(seed, index),
-            HDWallet::Stellar(_master_key) => tron_keypair_by_index(&HDSeed::new("")?, index), //NTD
+            HDWallet::Stellar(_master_key) => unimplemented!()
         }
     }
 
@@ -474,48 +474,6 @@ async fn tron_sweep_main(
     to_str: &str,
     provider: &str,
 ) -> Result<String, Error> {
-    let transport = web3::transports::Http::new(provider)?;
-    let web3 = web3::Web3::new(transport);
-    let addr_str = tron_address_by_index_hex(seed, index)?;
-    let prvk_str = eth_private_by_index(seed, index)?;
-    let prvk = web3::signing::SecretKey::from_str(&prvk_str)?;
-    let addr = H160::from_str(&addr_str)?;
-    let to = H160::from_str(&tron_to_hex(to_str)?)?;
-    let gas_price = web3.eth().gas_price().await?;
-    let bal = web3.eth().balance(addr, None).await?;
-    let fee = gas_price * 21000 * 5;
-    let val_to_send = bal - fee;
-    let tx_call_req = CallRequest {
-        to: Some(to),
-        value: Some(bal),
-        ..Default::default()
-    };
-    let est_gas = web3.eth().estimate_gas(tx_call_req, None).await?;
-    println!("================");
-    println!("gas_price: {:?}", &gas_price);
-    println!("bal: {:?}", &bal);
-    println!("fee: {:?}", &fee);
-    println!("val_to_send: {:?}", &val_to_send);
-    println!("est_gas: {:?}", &est_gas);
-    let tx_object = TransactionParameters {
-        to: Some(to),
-        value: val_to_send,
-        nonce: Some(U256::from(11)),
-        ..Default::default()
-    };
-    println!("all okay main 1");
-    let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
-    let _tx_raw = "0a026ffa22086e06b4977c94304540908fb8e4a6315a67080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a1541279f93bc1feb8af89d3253c5471b823c26671a92121541c90c049a15d5ef5af136653ccd6f26758b821e9018a08d0670c3c5b4e4a631";
-    println!("all okay main 2");
-    println!("signed: {:?}", signed.raw_transaction);
-    println!("signed_hex: {:?}", "main2");
-    Ok("aaaaaaaa".to_owned())
-    //let result = web3
-    //    .eth()
-    //    .send_raw_transaction(signed.raw_transaction)
-    //    .await?;
-    //println!("Tx succeeded with hash: {}", result);
-    //Ok(result.to_string())
 }
 
 async fn eth_balance_token(
