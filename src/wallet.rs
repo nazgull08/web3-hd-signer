@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use ethers::types::spoof::balance;
 use ::sha256::digest;
 use bip39::Language;
 use bip39::{Mnemonic, Seed};
@@ -18,10 +19,11 @@ use sha3::{Digest, Keccak256};
 use std::sync::Arc;
 use web3::contract::{Contract, Options};
 use web3::types::{
-    Address, CallRequest, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256,
+    Address, Transaction, TransactionParameters, TransactionReceipt, H160, H256, U256,
 };
 
 use crate::error::Error;
+use crate::tron::calls::{transfer_trx, transfer_trc20};
 use crate::types::*;
 
 use stellar_sdk::{utils::Endpoint, CallBuilder, Keypair, Server};
@@ -440,32 +442,19 @@ async fn eth_sweep_main(
     let to = Address::from_str(to_str)?;
     let gas_price = web3.eth().gas_price().await?;
     let bal = web3.eth().balance(addr, None).await?;
-    let fee = gas_price * 21000 * 5;
+    let fee = gas_price * 21000 * 3;
     let val_to_send = bal - fee;
-    let tx_call_req = CallRequest {
-        to: Some(to),
-        value: Some(bal),
-        ..Default::default()
-    };
-    let est_gas = web3.eth().estimate_gas(tx_call_req, None).await?;
-    println!("================");
-    println!("gas_price: {:?}", &gas_price);
-    println!("bal: {:?}", &bal);
-    println!("fee: {:?}", &fee);
-    println!("val_to_send: {:?}", &val_to_send);
-    println!("est_gas: {:?}", &est_gas);
     let tx_object = TransactionParameters {
         to: Some(to),
         value: val_to_send,
         ..Default::default()
     };
     let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
-    let result = web3
+    let res = web3
         .eth()
         .send_raw_transaction(signed.raw_transaction)
-        .await?;
-    println!("Tx succeeded with hash: {}", result);
-    Ok("lalala".to_owned())
+        .await.map(|hash|hash.to_string())?;
+    Ok(res)
 }
 
 async fn tron_sweep_main(
@@ -474,6 +463,23 @@ async fn tron_sweep_main(
     to_str: &str,
     provider: &str,
 ) -> Result<String, Error> {
+    let transport = web3::transports::Http::new(provider)?;
+    let web3 = web3::Web3::new(transport);
+    let addr_str = eth_address_by_index(seed, index)?;
+    let from = tron_to_hex_raw(&addr_str)?;
+    let to = tron_to_hex_raw(&to_str)?;
+    let prvk_str = eth_private_by_index(seed, index)?;
+    let addr_h160 = H160::from_str(&addr_str)?;
+    let gas_price = web3.eth().gas_price().await?;
+    let bal = web3.eth().balance(addr_h160, None).await?;
+    let fee = gas_price * 21000 * 3;
+    let val_to_send = bal - fee;
+    println!("val_to_send U256: {:?}",val_to_send);
+    println!("val_to_send  i64: {:?}",val_to_send.as_u64() as i64);
+    let amount = val_to_send.as_u64() as i64;
+    let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
+    Ok(res)
+
 }
 
 async fn eth_balance_token(
@@ -661,13 +667,12 @@ async fn tron_sweep_token(
 ) -> Result<H256, Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
-    //let addr_str = tron_address_by_index_hex(seed, index)?;
     let prvk_str = tron_private_by_index(seed, index)?;
-    let prvk = web3::signing::SecretKey::from_str(&prvk_str)?;
-    //let addr = H160::from_str(&addr_str)?;
     let addr_str = tron_address_by_index_hex(seed, index)?;
+    let addr_hex_str = tron_address_by_index(seed, index)?;
+    let to = tron_to_hex_raw(&to_str)?;
+    let from = tron_to_hex_raw(&addr_hex_str)?;
     let addr = H160::from_str(&addr_str)?;
-    let to = H160::from_str(&tron_to_hex(to_str)?)?;
     let token_address = H160::from_str(token_addr)?;
     let contract = Contract::from_json(
         web3.eth(),
@@ -677,35 +682,10 @@ async fn tron_sweep_token(
     let balance_of: U256 = contract
         .query("balanceOf", (addr,), None, Options::default(), None)
         .await?;
-    let gas_est = contract
-        .estimate_gas("transfer", (to, balance_of), addr, Options::default())
-        .await?;
+    let amount = balance_of.as_u64() as i64;
 
-    let gas_price = web3.eth().gas_price().await?;
-    let fee = gas_est * gas_price;
-    println!("================");
-    println!("gas_price: {:?}", &gas_price);
-    println!("gas_est: {:?}", &gas_est);
-    println!("fee: {:?}", &fee);
-    println!("all okay token 1");
-    let token_call = contract
-        .call(
-            "transfer",
-            (to, balance_of),
-            addr,
-            Options {
-                nonce: Some(U256::from(10)),
-                ..Default::default()
-            },
-        )
-        .await?;
-    println!("all okay token 2");
-    println!("token_call: {:?}", token_call);
-    let signed_token_call = web3.accounts().sign(token_call, &prvk);
-    println!("all okay token 3");
-    println!("signed token call: {:?}", signed_token_call);
-    Err(Error::MnemonicError("aaa".to_owned()))
-    //Ok(token_call)
+    let res = transfer_trc20(&from, &to, &prvk_str, amount, token_addr).await?;
+    Ok(H256::from_str(&res)?)
 }
 
 pub async fn gas_price(provider: &str) -> Result<U256, Error> {

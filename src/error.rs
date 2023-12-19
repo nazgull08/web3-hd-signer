@@ -37,4 +37,6 @@ pub enum Error {
     MnemonicError(String),
     #[error("Tron address {0} to hex error")]
     TronToHexError(String),
+    #[error("Tron transfer error")]
+    TronTransferError(#[from] crate::tron::error::Error),
 }

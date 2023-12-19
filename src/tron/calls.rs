@@ -1,4 +1,5 @@
 use crate::tron::abi::ABI;
+use crate::tron::error::Error;
 use crate::tron::{crypto, private};
 use crate::tron_grpc::wallet_client::WalletClient;
 use crate::tron_grpc::{self, EmptyMessage};
@@ -19,7 +20,7 @@ async fn get_client() -> WalletClient<Channel> {
     .expect("connect error")
 }
 
-pub async fn transfer_trx(c_from: &str, c_to: &str, priv_key: &str, amount: i64) {
+pub async fn transfer_trx(c_from: &str, c_to: &str, priv_key: &str, amount: i64) -> Result<String,Error> {
     let mut client = get_client().await;
     let from = hex::decode(c_from).expect("decode error");
     let to = hex::decode(c_to).expect("decode error");
@@ -93,6 +94,7 @@ pub async fn transfer_trx(c_from: &str, c_to: &str, priv_key: &str, amount: i64)
         .await
         .expect("broadcast error");
     println!("result: {:?}", &result);
+    Ok(hex::encode(txid).to_string())
 }
 
 pub async fn transfer_trc20(
@@ -101,13 +103,15 @@ pub async fn transfer_trc20(
     priv_key: &str,
     amount: i64,
     contract_addr: &str,
-) {
+) -> Result<String, Error> {
     let mut client = get_client().await;
     let from = hex::decode(c_from).expect("decode error");
     let to = hex::decode(c_to).expect("decode error");
     let amount: ethers::types::U256 = U256::from(amount);
     let secret_obj = private::Private::from_hex(priv_key).expect("decode error");
-    let contract_addr_bytes = base58::decode(contract_addr).expect("decode error");
+    let test_1 = "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj".to_owned();
+    println!("contract_addr {:?}",contract_addr);
+    let contract_addr_bytes = base58::decode(&test_1).expect("decode error");
 
     let now_block = client
         .get_now_block2(EmptyMessage {})
@@ -196,4 +200,5 @@ pub async fn transfer_trc20(
         "message:{}",
         String::from_utf8(result.message).expect("decode message error")
     );
+    Ok(hex::encode(txid).to_string())
 }
