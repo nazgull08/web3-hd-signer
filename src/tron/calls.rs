@@ -20,12 +20,17 @@ async fn get_client() -> WalletClient<Channel> {
     .expect("connect error")
 }
 
-pub async fn transfer_trx(c_from: &str, c_to: &str, priv_key: &str, amount: i64) -> Result<String,Error> {
+pub async fn transfer_trx(
+    c_from: &str,
+    c_to: &str,
+    priv_key: &str,
+    amount: i64,
+) -> Result<String, Error> {
     println!("============================================");
-    println!("c_from {:?}",c_from);
-    println!("c_to {:?}",c_to);
-    println!("priv_key {:?}",priv_key);
-    println!("amount {:?}",amount);
+    println!("c_from {:?}", c_from);
+    println!("c_to {:?}", c_to);
+    println!("priv_key {:?}", priv_key);
+    println!("amount {:?}", amount);
     println!("============================================");
     let mut client = get_client().await;
     let from = hex::decode(c_from).expect("decode error");
@@ -115,7 +120,7 @@ pub async fn transfer_trc20(
     let amount: ethers::types::U256 = U256::from(amount);
     let secret_obj = private::Private::from_hex(priv_key).expect("decode error");
     let test_1 = "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj".to_owned();
-    println!("contract_addr {:?}",contract_addr);
+    println!("contract_addr {:?}", contract_addr);
     let contract_addr_bytes = base58::decode(&test_1).expect("decode error");
 
     let now_block = client

@@ -1,11 +1,11 @@
-use std::{thread, time, str::FromStr};
-use ethers::types::{H160, H256};
+use ethers::types::H256;
+use std::{str::FromStr, thread, time};
 use web3::types::U256;
 
 use crate::{
     error::Error,
     fee::check_fee_token,
-    tron::calls::{transfer_trc20, transfer_trx},
+    tron::calls::transfer_trx,
     types::*,
     wallet::{send_main, tron_to_hex_raw, tx_info, HDSeed, HDWallet},
 };
@@ -80,7 +80,15 @@ pub async fn sweep_tokens(
             "Balance: {0}, fee {1}, refilling for {2}",
             balance, fee, val
         );
-        refill_address(&conf.sweeper, &conf.sweeper_tron_address, &addr, val, provider, crypto).await?;
+        refill_address(
+            &conf.sweeper,
+            &conf.sweeper_tron_address,
+            &addr,
+            val,
+            provider,
+            crypto,
+        )
+        .await?;
     };
     for (tok, _) in tokens {
         println!("token_addr: {:?}", &tok);
@@ -104,17 +112,17 @@ pub async fn refill_address(
     addr: &str,
     val: U256,
     provider: &str,
-    crypto: &Crypto
+    crypto: &Crypto,
 ) -> Result<(), Error> {
     let hash = match crypto {
-       Crypto::Tron => {
-           let amount = 10120000;
-           let sweeper_addr =  tron_to_hex_raw(sweeper_tron_address)?;
-           let to =  tron_to_hex_raw(addr)?;
-        //
-           H256::from_str(&transfer_trx(&sweeper_addr, &to, sweeper_prvk, amount).await?)?
-       }
-       _ => {send_main(sweeper_prvk, addr, val, provider).await?}
+        Crypto::Tron => {
+            let amount = 10120000;
+            let sweeper_addr = tron_to_hex_raw(sweeper_tron_address)?;
+            let to = tron_to_hex_raw(addr)?;
+            //
+            H256::from_str(&transfer_trx(&sweeper_addr, &to, sweeper_prvk, amount).await?)?
+        }
+        _ => send_main(sweeper_prvk, addr, val, provider).await?,
     };
     println!("{:?}", hash);
     let mut info = {
@@ -191,8 +199,8 @@ pub async fn debug_send(
     let from_hex = tron_to_hex_raw(&hdw.address(c_from as i32)?)?;
 
     //let from_1_hex = tron_to_hex_raw(&hdw.address((c_from + 1) as i32)?)?;
-    let to = tron_to_hex_raw(&c_to)?; 
-    let res = transfer_trx(&from_hex, &to, &pk, 881188).await;
+    let to = tron_to_hex_raw(&c_to)?;
+    let _res = transfer_trx(&from_hex, &to, &pk, 881188).await;
     //let contract_addr = conf.tron_tokens[0].clone();
     //transfer_trc20(&from_hex, &from_1_hex, &pk, 154321, &contract_addr).await;
 

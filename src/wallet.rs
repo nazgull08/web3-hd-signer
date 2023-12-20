@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use ethers::types::spoof::balance;
 use ::sha256::digest;
 use bip39::Language;
 use bip39::{Mnemonic, Seed};
@@ -23,7 +22,7 @@ use web3::types::{
 };
 
 use crate::error::Error;
-use crate::tron::calls::{transfer_trx, transfer_trc20};
+use crate::tron::calls::{transfer_trc20, transfer_trx};
 use crate::types::*;
 
 use stellar_sdk::{utils::Endpoint, CallBuilder, Keypair, Server};
@@ -78,7 +77,7 @@ impl HDWallet {
         match self {
             HDWallet::Ethereum(seed) => eth_keypair_by_index(seed, index),
             HDWallet::Tron(seed) => tron_keypair_by_index(seed, index),
-            HDWallet::Stellar(_master_key) => unimplemented!()
+            HDWallet::Stellar(_master_key) => unimplemented!(),
         }
     }
 
@@ -453,7 +452,8 @@ async fn eth_sweep_main(
     let res = web3
         .eth()
         .send_raw_transaction(signed.raw_transaction)
-        .await.map(|hash|hash.to_string())?;
+        .await
+        .map(|hash| hash.to_string())?;
     Ok(res)
 }
 
@@ -465,16 +465,15 @@ async fn tron_sweep_main(
 ) -> Result<String, Error> {
     let addr_str = tron_address_by_index(seed, index)?;
     let from = tron_to_hex_raw(&addr_str)?;
-    let to = tron_to_hex_raw(&to_str)?;
+    let to = tron_to_hex_raw(to_str)?;
     let prvk_str = tron_private_by_index(seed, index)?;
-    let bal= tron_balance(seed, index, provider).await?;
+    let bal = tron_balance(seed, index, provider).await?;
     let fee = 1200000;
     let val_to_send = bal - fee;
     let amount = val_to_send.as_u64() as i64;
     let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
     //let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
     Ok(res)
-
 }
 
 async fn eth_balance_token(
@@ -666,12 +665,12 @@ async fn tron_sweep_token(
     let addr_str = tron_address_by_index_hex(seed, index)?;
     let addr_hex_str = tron_address_by_index(seed, index)?;
     println!("----------------------------------");
-    println!("addr_str {:?}",addr_str);
-    println!("addr_str_hex {:?}",&addr_hex_str);
-    let to = tron_to_hex_raw(&to_str)?;
-    println!("to {:?}",to);
+    println!("addr_str {:?}", addr_str);
+    println!("addr_str_hex {:?}", &addr_hex_str);
+    let to = tron_to_hex_raw(to_str)?;
+    println!("to {:?}", to);
     let from = tron_to_hex_raw(&addr_hex_str)?;
-    println!("from {:?}",from);
+    println!("from {:?}", from);
     let addr = H160::from_str(&addr_str)?;
     let token_address = H160::from_str(token_addr)?;
     let contract = Contract::from_json(

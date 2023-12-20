@@ -64,7 +64,7 @@ async fn main() -> Result<(), Error> {
         Commands::Sweep { c } => {
             let b = balance(&conf, c, &crypto).await?;
             println!("---------------------------------");
-            println!("{:?}",b);
+            println!("{:?}", b);
             println!("---------------------------------");
             match b.state {
                 BalanceState::Empty => {
