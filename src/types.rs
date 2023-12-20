@@ -15,6 +15,7 @@ pub struct WalletAddress {
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub sweeper: String,
+    pub sweeper_tron_address: String,
     pub hd_phrase: String,
     pub eth_tokens: Vec<String>,
     pub eth_safe: String,

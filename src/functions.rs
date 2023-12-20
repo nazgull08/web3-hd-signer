@@ -1,4 +1,5 @@
-use std::{thread, time};
+use std::{thread, time, str::FromStr};
+use ethers::types::{H160, H256};
 use web3::types::U256;
 
 use crate::{
@@ -79,7 +80,7 @@ pub async fn sweep_tokens(
             "Balance: {0}, fee {1}, refilling for {2}",
             balance, fee, val
         );
-        refill_address(&conf.sweeper, &addr, val, provider).await?;
+        refill_address(&conf.sweeper, &conf.sweeper_tron_address, &addr, val, provider, crypto).await?;
     };
     for (tok, _) in tokens {
         println!("token_addr: {:?}", &tok);
@@ -99,11 +100,23 @@ pub async fn sweep_tokens(
 
 pub async fn refill_address(
     sweeper_prvk: &str,
+    sweeper_tron_address: &str,
     addr: &str,
     val: U256,
     provider: &str,
+    crypto: &Crypto
 ) -> Result<(), Error> {
-    let hash = send_main(sweeper_prvk, addr, val, provider).await?;
+    let hash = match crypto {
+       Crypto::Tron => {
+           let amount = 10120000;
+           let sweeper_addr =  tron_to_hex_raw(sweeper_tron_address)?;
+           let to =  tron_to_hex_raw(addr)?;
+        //
+           H256::from_str(&transfer_trx(&sweeper_addr, &to, sweeper_prvk, amount).await?)?
+       }
+       _ => {send_main(sweeper_prvk, addr, val, provider).await?}
+    };
+    println!("{:?}", hash);
     let mut info = {
         let r_info = tx_info(hash, provider).await;
         while r_info.is_err() {
