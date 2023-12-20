@@ -463,21 +463,16 @@ async fn tron_sweep_main(
     to_str: &str,
     provider: &str,
 ) -> Result<String, Error> {
-    let transport = web3::transports::Http::new(provider)?;
-    let web3 = web3::Web3::new(transport);
-    let addr_str = eth_address_by_index(seed, index)?;
+    let addr_str = tron_address_by_index(seed, index)?;
     let from = tron_to_hex_raw(&addr_str)?;
     let to = tron_to_hex_raw(&to_str)?;
-    let prvk_str = eth_private_by_index(seed, index)?;
-    let addr_h160 = H160::from_str(&addr_str)?;
-    let gas_price = web3.eth().gas_price().await?;
-    let bal = web3.eth().balance(addr_h160, None).await?;
-    let fee = gas_price * 21000 * 3;
+    let prvk_str = tron_private_by_index(seed, index)?;
+    let bal= tron_balance(seed, index, provider).await?;
+    let fee = 1200000;
     let val_to_send = bal - fee;
-    println!("val_to_send U256: {:?}",val_to_send);
-    println!("val_to_send  i64: {:?}",val_to_send.as_u64() as i64);
     let amount = val_to_send.as_u64() as i64;
     let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
+    //let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
     Ok(res)
 
 }
@@ -670,8 +665,13 @@ async fn tron_sweep_token(
     let prvk_str = tron_private_by_index(seed, index)?;
     let addr_str = tron_address_by_index_hex(seed, index)?;
     let addr_hex_str = tron_address_by_index(seed, index)?;
+    println!("----------------------------------");
+    println!("addr_str {:?}",addr_str);
+    println!("addr_str_hex {:?}",&addr_hex_str);
     let to = tron_to_hex_raw(&to_str)?;
+    println!("to {:?}",to);
     let from = tron_to_hex_raw(&addr_hex_str)?;
+    println!("from {:?}",from);
     let addr = H160::from_str(&addr_str)?;
     let token_address = H160::from_str(token_addr)?;
     let contract = Contract::from_json(

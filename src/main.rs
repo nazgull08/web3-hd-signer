@@ -63,20 +63,26 @@ async fn main() -> Result<(), Error> {
         }
         Commands::Sweep { c } => {
             let b = balance(&conf, c, &crypto).await?;
+            println!("---------------------------------");
+            println!("{:?}",b);
+            println!("---------------------------------");
             match b.state {
                 BalanceState::Empty => {
                     println!("nothing to sweep")
                 }
                 BalanceState::Main { balance: _ } => {
+                    println!("sweeping main coin");
                     sweep_main(conf, c, crypto).await?;
                 }
                 BalanceState::Tokens { tokens_balance } => {
+                    println!("sweeping tokens");
                     sweep_tokens(&conf, c, &crypto, tokens_balance).await?;
                 }
                 BalanceState::TokensMain {
                     tokens_balance,
                     balance: _,
                 } => {
+                    println!("sweeping tokens and main coin");
                     sweep_tokens(&conf, c, &crypto, tokens_balance).await?;
                     sweep_main(conf, c, crypto).await?;
                 }

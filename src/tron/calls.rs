@@ -21,6 +21,12 @@ async fn get_client() -> WalletClient<Channel> {
 }
 
 pub async fn transfer_trx(c_from: &str, c_to: &str, priv_key: &str, amount: i64) -> Result<String,Error> {
+    println!("============================================");
+    println!("c_from {:?}",c_from);
+    println!("c_to {:?}",c_to);
+    println!("priv_key {:?}",priv_key);
+    println!("amount {:?}",amount);
+    println!("============================================");
     let mut client = get_client().await;
     let from = hex::decode(c_from).expect("decode error");
     let to = hex::decode(c_to).expect("decode error");
@@ -79,7 +85,6 @@ pub async fn transfer_trx(c_from: &str, c_to: &str, priv_key: &str, amount: i64)
     let _ = raw.encode(&mut raw_bytes);
 
     let txid = crypto::sha256(&raw_bytes);
-    println!("txid:{}", hex::encode(txid));
 
     let sign_val = secret_obj.sign_digest(txid.as_slice()).expect("sign error");
 

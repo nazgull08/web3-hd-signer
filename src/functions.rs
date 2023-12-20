@@ -32,8 +32,9 @@ pub async fn sweep_main(conf: Settings, i: u32, crypto: Crypto) -> Result<(), Er
         Crypto::Stellar => conf.stl_safe,
     };
     println!(
-        "Sweeping from {0} in {1}...",
+        "Sweeping from {0} to {1} in {2}...",
         hdw.address(i as i32)?,
+        &to,
         crypto
     );
     let res = hdw.sweep(i as i32, &to, &provider).await?;
@@ -160,7 +161,7 @@ pub async fn privkey(conf: &Settings, i: u32, crypto: &Crypto) -> Result<String,
 pub async fn debug_send(
     conf: &Settings,
     c_from: u32,
-    _c_to: String,
+    c_to: String,
     crypto: &Crypto,
 ) -> Result<String, Error> {
     let phrase = &conf.hd_phrase;
@@ -176,11 +177,11 @@ pub async fn debug_send(
     let pk = hdw.private(c_from as i32)?;
     let from_hex = tron_to_hex_raw(&hdw.address(c_from as i32)?)?;
 
-    let from_1_hex = tron_to_hex_raw(&hdw.address((c_from + 1) as i32)?)?;
-    let contract_addr = conf.tron_tokens[0].clone();
-
-    transfer_trx(&from_hex, &from_1_hex, &pk, 23456).await;
-    transfer_trc20(&from_hex, &from_1_hex, &pk, 154321, &contract_addr).await;
+    //let from_1_hex = tron_to_hex_raw(&hdw.address((c_from + 1) as i32)?)?;
+    let to = tron_to_hex_raw(&c_to)?; 
+    let res = transfer_trx(&from_hex, &to, &pk, 881188).await;
+    //let contract_addr = conf.tron_tokens[0].clone();
+    //transfer_trc20(&from_hex, &from_1_hex, &pk, 154321, &contract_addr).await;
 
     Ok("werwe".to_string())
 }
