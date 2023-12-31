@@ -91,8 +91,6 @@ pub async fn sweep_tokens(
         .await?;
     };
     for (tok, _) in tokens {
-        println!("token_addr: {:?}", &tok);
-        println!("tok: {tok}");
         let hash = hdw.sweep_token(i as i32, &tok, to, provider).await?;
         println!("sweeped: {:?}", hash);
         let mut info = tx_info(hash, provider).await?;
