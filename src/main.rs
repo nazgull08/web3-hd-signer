@@ -23,7 +23,7 @@ use web3_hd_signer::types::*;
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[arg(short, long)]
-    crypto: Crypto,
+    crypto: Option<Crypto>,
     #[arg(default_value = "./config.toml")]
     path: String,
     #[command(subcommand)]
@@ -34,13 +34,14 @@ struct Cli {
 async fn main() -> Result<(), Error> {
     let args = Cli::parse();
 
-    let conf = Config::builder()
-        .add_source(config::File::with_name("config.toml"))
-        .build()?
-        .try_deserialize::<Settings>()?;
-    let crypto = args.crypto;
+
+    let crypto = args.crypto.unwrap(); //NTD Add proper error
     match args.command {
         Commands::Balance { c } => {
+            let conf = Config::builder()
+                .add_source(config::File::with_name("config.toml"))
+                .build()?
+                .try_deserialize::<Settings>()?;
             let b = balance(&conf, c, &crypto).await?;
             println!("{:?}", b);
         }
@@ -48,6 +49,10 @@ async fn main() -> Result<(), Error> {
             c_from: o_c_from,
             c_to: o_c_to,
         } => {
+            let conf = Config::builder()
+                .add_source(config::File::with_name("config.toml"))
+                .build()?
+                .try_deserialize::<Settings>()?;
             let (c_from, c_to) = match (o_c_to, o_c_from) {
                 (Some(cfrom), Some(cto)) => (cto, cfrom),
                 _ => (0, 10),
@@ -62,10 +67,11 @@ async fn main() -> Result<(), Error> {
             println!("Implement refill...");
         }
         Commands::Sweep { c } => {
+            let conf = Config::builder()
+                .add_source(config::File::with_name("config.toml"))
+                .build()?
+                .try_deserialize::<Settings>()?;
             let b = balance(&conf, c, &crypto).await?;
-            println!("---------------------------------");
-            println!("{:?}", b);
-            println!("---------------------------------");
             match b.state {
                 BalanceState::Empty => {
                     println!("nothing to sweep")
@@ -92,9 +98,17 @@ async fn main() -> Result<(), Error> {
             generate_hd_prase().await;
         }
         Commands::PrivKey { c } => {
+            let conf = Config::builder()
+                .add_source(config::File::with_name("config.toml"))
+                .build()?
+                .try_deserialize::<Settings>()?;
             privkey_print(&conf, c, &crypto).await?;
         }
         Commands::DebugSend { c_from, c_to } => {
+            let conf = Config::builder()
+                .add_source(config::File::with_name("config.toml"))
+                .build()?
+                .try_deserialize::<Settings>()?;
             let _debug_send_resp = debug_send(&conf, c_from, c_to, &crypto).await?;
         }
     };

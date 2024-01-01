@@ -4,3 +4,5 @@
 * Implement stellar calls =(
 * Clean types and logic
 * Calculate Tron priv -> Tron Pub
+* Remove necessary config
+* Remove necessary currency
