@@ -20,7 +20,7 @@ path = "src/main.rs"
 anyhow = "^1.0.57"
 bitcoin = "0.30.0"
 clap = { version = "^4.0", features = ["derive"] }
-chrono = "^0.4.31"
+chrono = "^0.4.19"
 config = "^0.13.3"
 eth_checksum = "0.1.2"
 ethers = { features=["legacy","abigen"]}
