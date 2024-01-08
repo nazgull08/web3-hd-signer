@@ -432,6 +432,7 @@ async fn eth_sweep_main(
     to_str: &str,
     provider: &str,
 ) -> Result<String, Error> {
+    println!("provider: {:?}",&provider);
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index)?;
