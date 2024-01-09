@@ -112,11 +112,11 @@ impl HDWallet {
         }
     }
 
-    pub async fn sweep(&self, index: i32, to: &str, provider: &str) -> Result<String, Error> {
+    pub async fn sweep(&self, index: i32, to: &str, provider: &str) -> Result<H256, Error> {
         match self {
             HDWallet::Ethereum(seed) => eth_sweep_main(seed, index, to, provider).await,
             HDWallet::Tron(seed) => tron_sweep_main(seed, index, to, provider).await,
-            HDWallet::Stellar(_master_key) => Ok("unimplemented".to_owned()),
+            HDWallet::Stellar(_master_key) => Ok(H256::zero()),
         }
     }
 
@@ -431,7 +431,7 @@ async fn eth_sweep_main(
     index: i32,
     to_str: &str,
     provider: &str,
-) -> Result<String, Error> {
+) -> Result<H256, Error> {
     println!("provider: {:?}",&provider);
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
@@ -464,7 +464,7 @@ async fn eth_sweep_main(
         .eth()
         .send_raw_transaction(signed.raw_transaction)
         .await
-        .map(|hash| hash.to_string())?;
+        .map(|hash| hash)?;
     println!("res {:?}",res);
     Ok(res)
 }
@@ -474,7 +474,7 @@ async fn tron_sweep_main(
     index: i32,
     to_str: &str,
     provider: &str,
-) -> Result<String, Error> {
+) -> Result<H256, Error> {
     let addr_str = tron_address_by_index(seed, index)?;
     let from = tron_to_hex_raw(&addr_str)?;
     let to = tron_to_hex_raw(to_str)?;
@@ -484,8 +484,7 @@ async fn tron_sweep_main(
     let val_to_send = bal - fee;
     let amount = val_to_send.as_u64() as i64;
     let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
-    //let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
-    Ok(res)
+    Ok(H256::from_str(&res)?)
 }
 
 async fn eth_balance_token(
