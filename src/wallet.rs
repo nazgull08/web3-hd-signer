@@ -480,8 +480,12 @@ async fn tron_sweep_main(
     let to = tron_to_hex_raw(to_str)?;
     let prvk_str = tron_private_by_index(seed, index)?;
     let bal = tron_balance(seed, index, provider).await?;
-    let fee = 1200000;
-    let val_to_send = bal - fee;
+    let fee = U256::from(1200000);
+    let val_to_send = if bal > fee {
+            Ok(bal - fee)}
+        else {
+            Err(Error::NotEnoughBalanceError(bal, fee,addr_str))
+        }?;
     let amount = val_to_send.as_u64() as i64;
     let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
     Ok(H256::from_str(&res)?)
