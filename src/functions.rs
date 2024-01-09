@@ -39,7 +39,7 @@ pub async fn sweep_main(conf: Settings, i: u32, crypto: Crypto) -> Result<(), Er
         crypto
     );
     let res = hdw.sweep(i as i32, &to, &provider).await?;
-    println!("{res}");
+    println!("{:?}",res);
     Ok(())
 }
 
@@ -91,13 +91,13 @@ pub async fn sweep_tokens(
         .await?;
     };
     for (tok, _) in tokens {
-        let hash = hdw.sweep_token(i as i32, &tok, to, provider).await?;
-        println!("sweeped: {:?}", hash);
-        let mut info = tx_info(hash, provider).await?;
+        let tx= hdw.sweep_token(i as i32, &tok, to, provider).await?;
+        println!("sweeped: {:?}", tx);
+        let mut info = tx_info(tx.hash, provider).await?;
         while info.transaction_index.is_none() {
             println!("waiting for confirmation...");
             thread::sleep(time::Duration::from_secs(5));
-            info = tx_info(hash, provider).await?;
+            info = tx_info(tx.hash, provider).await?;
         }
         println!("---------confirmed-----------");
     }
