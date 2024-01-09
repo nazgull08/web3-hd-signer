@@ -112,7 +112,7 @@ impl HDWallet {
         }
     }
 
-    pub async fn sweep(&self, index: i32, to: &str, provider: &str) -> Result<Transaction, Error> {
+    pub async fn sweep(&self, index: i32, to: &str, provider: &str) -> Result<(Transaction,U256), Error> {
         match self {
             HDWallet::Ethereum(seed) => eth_sweep_main(seed, index, to, provider).await,
             HDWallet::Tron(seed) => tron_sweep_main(seed, index, to, provider).await,
@@ -126,7 +126,7 @@ impl HDWallet {
         addr: &str,
         to: &str,
         provider: &str,
-    ) -> Result<Transaction, Error> {
+    ) -> Result<(Transaction,U256), Error> {
         match self {
             HDWallet::Ethereum(seed) => {
                 eth_sweep_token(seed, index, addr, to, provider, Crypto::Eth).await
@@ -432,7 +432,7 @@ async fn eth_sweep_main(
     index: i32,
     to_str: &str,
     provider: &str,
-) -> Result<Transaction, Error> {
+) -> Result<(Transaction,U256), Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index)?;
@@ -471,7 +471,7 @@ async fn eth_sweep_main(
         .transaction(web3::types::TransactionId::Hash(res))
         .await?
         .ok_or(Error::Web3NoTransactionError(res))?;
-    Ok(tx)
+    Ok((tx,fee))
 }
 
 async fn tron_sweep_main(
@@ -479,7 +479,7 @@ async fn tron_sweep_main(
     index: i32,
     to_str: &str,
     provider: &str,
-) -> Result<Transaction, Error> {
+) -> Result<(Transaction,U256), Error> {
     let addr_str = tron_address_by_index(seed, index)?;
     let from = tron_to_hex_raw(&addr_str)?;
     let to = tron_to_hex_raw(to_str)?;
@@ -494,7 +494,7 @@ async fn tron_sweep_main(
     let amount = val_to_send.as_u64() as i64;
     let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
     let tx = tx_info(H256::from_str(&res)?, provider).await?;
-    Ok(tx)
+    Ok((tx,fee))
 }
 
 async fn eth_balance_token(
@@ -637,7 +637,7 @@ async fn eth_sweep_token(
     to_str: &str,
     provider: &str,
     _: Crypto,
-) -> Result<Transaction, Error> {
+) -> Result<(Transaction,U256), Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index)?;
@@ -674,7 +674,7 @@ async fn eth_sweep_token(
         .transaction(web3::types::TransactionId::Hash(res))
         .await?
         .ok_or(Error::Web3NoTransactionError(res))?;
-    Ok(tx)
+    Ok((tx,fee))
 }
 
 async fn tron_sweep_token(
@@ -684,7 +684,7 @@ async fn tron_sweep_token(
     to_str: &str,
     provider: &str,
     _: Crypto,
-) -> Result<Transaction, Error> {
+) -> Result<(Transaction,U256), Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let prvk_str = tron_private_by_index(seed, index)?;
@@ -715,7 +715,7 @@ async fn tron_sweep_token(
         .transaction(web3::types::TransactionId::Hash(H256::from_str(&res)?))
         .await?
         .ok_or(Error::Web3NoTransactionError(H256::from_str(&res)?))?;
-    Ok(tx)
+    Ok((tx.clone(),tx.gas*tx.gas_price.unwrap()))
 }
 
 pub async fn gas_price(provider: &str) -> Result<U256, Error> {
