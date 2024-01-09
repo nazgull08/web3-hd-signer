@@ -1,4 +1,4 @@
-use web3::types::H256;
+use web3::types::{H256,U256};
 
 use std::sync::Arc;
 use thiserror::Error;
@@ -39,4 +39,6 @@ pub enum Error {
     TronToHexError(String),
     #[error("Tron transfer error")]
     TronTransferError(#[from] crate::tron::error::Error),
+    #[error("Balance {0} is less than the required fee {1} at {2}")]
+    NotEnoughBalanceError(U256,U256,String)
 }

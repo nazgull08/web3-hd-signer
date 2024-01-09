@@ -441,20 +441,31 @@ async fn eth_sweep_main(
     let addr = H160::from_str(&addr_str)?;
     let to = Address::from_str(to_str)?;
     let gas_price = web3.eth().gas_price().await?;
+    println!("debug0");
     let bal = web3.eth().balance(addr, None).await?;
+    println!("debug1");
     let fee = gas_price * 21000 * 5;
-    let val_to_send = bal - fee;
+    println!("debug2");
+    let val_to_send = if bal > fee {
+            Ok(bal - fee)}
+        else {
+            Err(Error::NotEnoughBalanceError(bal, fee,addr_str))
+        }?;
+    println!("debug3");
     let tx_object = TransactionParameters {
         to: Some(to),
         value: val_to_send,
         ..Default::default()
     };
+    println!("debug4");
     let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
+    println!("debug5");
     let res = web3
         .eth()
         .send_raw_transaction(signed.raw_transaction)
         .await
         .map(|hash| hash.to_string())?;
+    println!("res {:?}",res);
     Ok(res)
 }
 
