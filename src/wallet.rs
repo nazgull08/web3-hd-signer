@@ -433,20 +433,20 @@ async fn eth_sweep_main(
     to_str: &str,
     provider: &str,
 ) -> Result<Transaction, Error> {
-    println!("provider: {:?}",&provider);
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index)?;
     let prvk_str = eth_private_by_index(seed, index)?;
     let prvk = web3::signing::SecretKey::from_str(&prvk_str)?;
     let addr = H160::from_str(&addr_str)?;
+    println!("sweeping main token from for: {:?}",&addr_str);
     let to = Address::from_str(to_str)?;
     let gas_price = web3.eth().gas_price().await?;
-    println!("debug0");
     let bal = web3.eth().balance(addr, None).await?;
-    println!("debug1");
+    println!("balance: {:?}", bal);
     let fee = gas_price * 21000 * 5;
-    println!("debug2");
+    println!("gas_price: {:?}", gas_price);
+    println!("fee: {:?}", fee);
     let val_to_send = if bal > fee {
             Ok(bal - fee)}
         else {
@@ -458,9 +458,8 @@ async fn eth_sweep_main(
         value: val_to_send,
         ..Default::default()
     };
-    println!("debug4");
+    println!("sweeping val {:?}",val_to_send);
     let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
-    println!("debug5");
     let res = web3
         .eth()
         .send_raw_transaction(signed.raw_transaction)
