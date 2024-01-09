@@ -27,6 +27,7 @@ ethers = { features=["legacy","abigen"]}
 hex = "0.4.3"
 libsecp256k1 = "0.7.1"
 log = "^0.4.19"
+primitive-types = "0.11.1"
 reqwest = "^0.11.18"
 rustc-hex = "^2.1.0"
 secp256k1 = "0.27.0"
