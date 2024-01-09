@@ -1,6 +1,6 @@
 use ethers::types::H256;
 use std::{str::FromStr, thread, time};
-use web3::types::U256;
+use web3::types::{U256, Transaction};
 
 use crate::{
     error::Error,
@@ -80,7 +80,7 @@ pub async fn sweep_tokens(
             "Balance: {0}, fee {1}, refilling for {2}",
             balance, fee, val
         );
-        refill_address(
+        let _ = refill_address(
             &conf.sweeper,
             &conf.sweeper_tron_address,
             &addr,
@@ -111,7 +111,7 @@ pub async fn refill_address(
     val: U256,
     provider: &str,
     crypto: &Crypto,
-) -> Result<(), Error> {
+) -> Result<Transaction, Error> {
     let hash = match crypto {
         Crypto::Tron => {
             let amount = 10120000;
@@ -140,7 +140,7 @@ pub async fn refill_address(
     }
     println!("---------confirmed-----------");
     println!("{:?}", info);
-    Ok(())
+    Ok(info)
 }
 
 pub async fn privkey_print(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(), Error> {

@@ -137,6 +137,7 @@ impl HDWallet {
             HDWallet::Stellar(_seed) => Err(Error::CurrencyNotImplementedError) 
         }
     }
+
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -814,3 +815,4 @@ pub fn tron_to_hex_raw(addr: &str) -> Result<String, Error> {
         Ok(hex_str)
     }
 }
+
