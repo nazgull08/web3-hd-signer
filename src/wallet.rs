@@ -508,6 +508,12 @@ async fn tron_sweep_main(
         }?;
     let amount = val_to_send.as_u64() as i64;
     let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
+    let mut t_tx = tx_info(H256::from_str(&res)?, provider).await;
+    while t_tx.err().is_some() {
+        println!("waiting for confirmation...");
+        sleep_ms(5000);
+        t_tx = tx_info(H256::from_str(&res)?, provider).await;
+    }
     let tx = tx_info(H256::from_str(&res)?, provider).await?;
     Ok((tx,fee))
 }
@@ -684,11 +690,25 @@ async fn eth_sweep_token(
         .signed_call("transfer", (to, balance_of), Options::default(), &prvk)
         .await?;
     println!("token_receipt: {:?}", res);
+    let mut t_tx = web3
+        .eth()
+        .transaction(web3::types::TransactionId::Hash(res))
+        .await?
+        .ok_or(Error::Web3NoTransactionError(res));
+    while t_tx.err().is_some() {
+        println!("waiting for confirmation...");
+        sleep_ms(5000);
+        t_tx = web3
+        .eth()
+        .transaction(web3::types::TransactionId::Hash(res))
+        .await?
+        .ok_or(Error::Web3NoTransactionError(res));
+    }
     let tx = web3
         .eth()
         .transaction(web3::types::TransactionId::Hash(res))
         .await?
-        .ok_or(Error::Web3NoTransactionError(res))?;
+        .ok_or(Error::Web3NoTransactionError(res))?;//NTD make it cleaner
     Ok((tx,fee))
 }
 
@@ -725,11 +745,13 @@ async fn tron_sweep_token(
     let amount = balance_of.as_u64() as i64;
 
     let res = transfer_trc20(&from, &to, &prvk_str, amount, token_addr).await?;
-    let tx = web3
-        .eth()
-        .transaction(web3::types::TransactionId::Hash(H256::from_str(&res)?))
-        .await?
-        .ok_or(Error::Web3NoTransactionError(H256::from_str(&res)?))?;
+    let mut t_tx = tx_info(H256::from_str(&res)?, provider).await;
+    while t_tx.err().is_some() {
+        println!("waiting for confirmation...");
+        sleep_ms(5000);
+        t_tx = tx_info(H256::from_str(&res)?, provider).await;
+    }
+    let tx =tx_info(H256::from_str(&res)?, provider).await?;
     Ok((tx.clone(),tx.gas*tx.gas_price.unwrap()))
 }
 
