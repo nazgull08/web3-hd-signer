@@ -473,10 +473,10 @@ async fn eth_sweep_main(
         .await?
         .ok_or(Error::Web3NoTransactionError(res));
     let mut counter = 0;
-    while t_tx.err().is_some() && counter < 10 {
+    while t_tx.err().is_some() && counter < 120 {
         counter += 1;
         info!("waiting for confirmation...");
-        thread::sleep(time::Duration::from_secs(5));
+        thread::sleep(time::Duration::from_secs(60));
         t_tx = web3
             .eth()
             .transaction(web3::types::TransactionId::Hash(res))
@@ -512,10 +512,10 @@ async fn tron_sweep_main(
     let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
     let mut t_tx = tx_info(H256::from_str(&res)?, provider).await;
     let mut counter = 0;
-    while t_tx.err().is_some() && counter < 10 {
+    while t_tx.err().is_some() && counter < 120 {
         counter += 1;
         info!("waiting for confirmation...");
-        thread::sleep(time::Duration::from_secs(5));
+        thread::sleep(time::Duration::from_secs(60));
         t_tx = tx_info(H256::from_str(&res)?, provider).await;
     }
     let tx = tx_info(H256::from_str(&res)?, provider).await?;
@@ -696,10 +696,10 @@ async fn eth_sweep_token(
         .await?
         .ok_or(Error::Web3NoTransactionError(res));
     let mut counter = 0;
-    while t_tx.err().is_some() && counter < 10 {
+    while t_tx.err().is_some() && counter < 120 {
         counter += 1;
         info!("waiting for confirmation...");
-        thread::sleep(time::Duration::from_secs(5));
+        thread::sleep(time::Duration::from_secs(60));
         t_tx = web3
             .eth()
             .transaction(web3::types::TransactionId::Hash(res))
@@ -744,10 +744,10 @@ async fn tron_sweep_token(
     let res = transfer_trc20(&from, &to, &prvk_str, amount, token_addr).await?;
     let mut t_tx = tx_info(H256::from_str(&res)?, provider).await;
     let mut counter = 0;
-    while t_tx.err().is_some() && counter < 10 {
+    while t_tx.err().is_some() && counter < 120 {
         counter += 1;
         info!("waiting for confirmation...");
-        thread::sleep(time::Duration::from_secs(5));
+        thread::sleep(time::Duration::from_secs(60));
         t_tx = tx_info(H256::from_str(&res)?, provider).await;
     }
     let tx = tx_info(H256::from_str(&res)?, provider).await?;

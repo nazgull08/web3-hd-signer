@@ -96,7 +96,7 @@ pub async fn sweep_tokens(
         let mut info = tx_info(tx.hash, provider).await?;
         while info.transaction_index.is_none() {
             println!("waiting for confirmation...");
-            thread::sleep(time::Duration::from_secs(5));
+            thread::sleep(time::Duration::from_secs(60));
             info = tx_info(tx.hash, provider).await?;
         }
         println!("---------confirmed-----------");
@@ -126,11 +126,11 @@ pub async fn refill_address(
     let mut info = {
         let mut r_info = tx_info(hash, provider).await;
         let mut counter = 0;
-        while r_info.is_err() && counter < 10 {
+        while r_info.is_err() && counter < 120 {
             counter += 1;
             r_info = tx_info(hash, provider).await;
             println!("waiting for transaction {:?}...", hash);
-            thread::sleep(time::Duration::from_secs(5));
+            thread::sleep(time::Duration::from_secs(60));
         }
         Some(r_info?)
     };
@@ -141,11 +141,11 @@ pub async fn refill_address(
         || info
             .as_mut()
             .is_some_and(|inf| inf.transaction_index.is_none()))
-        && counter < 10
+        && counter < 120
     {
         counter += 1;
         println!("waiting for confirmation... {:?}", hash);
-        thread::sleep(time::Duration::from_secs(5));
+        thread::sleep(time::Duration::from_secs(60));
         info = (tx_info(hash, provider).await).ok();
     }
     println!("---------confirmed-----------");
@@ -165,9 +165,7 @@ pub async fn privkey_print(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(
     };
 
     let addr_i = hdw.address(i as i32)?;
-    let priv_k = hdw.private(i as i32)?;
     println!("addr: {:?}", addr_i);
-    println!("priv: {:?}", priv_k);
     Ok(())
 }
 

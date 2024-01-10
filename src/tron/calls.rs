@@ -29,7 +29,6 @@ pub async fn transfer_trx(
     println!("============================================");
     println!("c_from {:?}", c_from);
     println!("c_to {:?}", c_to);
-    println!("priv_key {:?}", priv_key);
     println!("amount {:?}", amount);
     println!("============================================");
     let mut client = get_client().await;

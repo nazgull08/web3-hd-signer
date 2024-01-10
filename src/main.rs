@@ -154,6 +154,6 @@ async fn refill_all(
 async fn generate_hd_prase() {
     let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
     let phrase = a.into_phrase();
-    info!("-----------");
-    info!("{:?}", phrase);
+    println!("-----------");
+    println!("{:?}", phrase);
 }
