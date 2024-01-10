@@ -472,7 +472,9 @@ async fn eth_sweep_main(
         .transaction(web3::types::TransactionId::Hash(res))
         .await?
         .ok_or(Error::Web3NoTransactionError(res));
-    while t_tx.err().is_some() {
+    let mut counter = 0;
+    while t_tx.err().is_some() && counter < 10{
+        counter += 1;
         println!("waiting for confirmation...");
         sleep_ms(5000);
         t_tx = web3
@@ -509,7 +511,9 @@ async fn tron_sweep_main(
     let amount = val_to_send.as_u64() as i64;
     let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
     let mut t_tx = tx_info(H256::from_str(&res)?, provider).await;
-    while t_tx.err().is_some() {
+    let mut counter = 0;
+    while t_tx.err().is_some() && counter < 10 {
+        counter += 1;
         println!("waiting for confirmation...");
         sleep_ms(5000);
         t_tx = tx_info(H256::from_str(&res)?, provider).await;
@@ -695,7 +699,9 @@ async fn eth_sweep_token(
         .transaction(web3::types::TransactionId::Hash(res))
         .await?
         .ok_or(Error::Web3NoTransactionError(res));
-    while t_tx.err().is_some() {
+    let mut counter = 0;
+    while t_tx.err().is_some() && counter < 10 {
+        counter += 1;
         println!("waiting for confirmation...");
         sleep_ms(5000);
         t_tx = web3
@@ -746,7 +752,9 @@ async fn tron_sweep_token(
 
     let res = transfer_trc20(&from, &to, &prvk_str, amount, token_addr).await?;
     let mut t_tx = tx_info(H256::from_str(&res)?, provider).await;
-    while t_tx.err().is_some() {
+    let mut counter = 0;
+    while t_tx.err().is_some() && counter < 10 {
+        counter += 1;
         println!("waiting for confirmation...");
         sleep_ms(5000);
         t_tx = tx_info(H256::from_str(&res)?, provider).await;

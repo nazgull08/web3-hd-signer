@@ -125,16 +125,20 @@ pub async fn refill_address(
     println!("{:?}", hash);
     let mut info = {
         let r_info = tx_info(hash, provider).await;
-        while r_info.is_err() {
-            println!("waiting for transaction...");
-            thread::sleep(time::Duration::from_secs(1));
+        let mut counter = 0;
+        while r_info.is_err() && counter < 10 {
+            counter += 1;
+            println!("waiting for transaction {:?}...", hash);
+            thread::sleep(time::Duration::from_secs(5));
         }
         r_info?
     };
     println!("--------------------");
     println!("{:?}", info);
-    while info.transaction_index.is_none() {
-        println!("waiting for confirmation...");
+    let mut counter = 0;
+    while info.transaction_index.is_none() && counter < 10 {
+        counter += 1;
+        println!("waiting for confirmation... {:?}",hash);
         thread::sleep(time::Duration::from_secs(5));
         info = tx_info(hash, provider).await?;
     }
