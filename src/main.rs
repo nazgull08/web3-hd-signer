@@ -14,6 +14,7 @@ use web3_hd_signer::error::Error;
 use web3_hd_signer::functions::*;
 use web3_hd_signer::types::*;
 
+use log::info;
 //NTD
 // ETH gas usage 94,795 | 63,197
 // BSC gas usage 76,654 | 51,103
@@ -34,7 +35,6 @@ struct Cli {
 async fn main() -> Result<(), Error> {
     let args = Cli::parse();
 
-
     let crypto = args.crypto.unwrap(); //NTD Add proper error
     match args.command {
         Commands::Balance { c } => {
@@ -43,7 +43,7 @@ async fn main() -> Result<(), Error> {
                 .build()?
                 .try_deserialize::<Settings>()?;
             let b = balance(&conf, c, &crypto).await?;
-            println!("{:?}", b);
+            info!("{:?}", b);
         }
         Commands::Balances {
             c_from: o_c_from,
@@ -59,12 +59,12 @@ async fn main() -> Result<(), Error> {
             };
             let balances = balances(&conf, c_from, c_to, &crypto).await?;
             for b in balances {
-                println!("================================");
-                println!("{:?}", b);
+                info!("================================");
+                info!("{:?}", b);
             }
         }
         Commands::Refill => {
-            println!("Implement refill...");
+            info!("Implement refill...");
         }
         Commands::Sweep { c } => {
             let conf = Config::builder()
@@ -74,21 +74,21 @@ async fn main() -> Result<(), Error> {
             let b = balance(&conf, c, &crypto).await?;
             match b.state {
                 BalanceState::Empty => {
-                    println!("nothing to sweep")
+                    info!("nothing to sweep")
                 }
                 BalanceState::Main { balance: _ } => {
-                    println!("sweeping main coin");
+                    info!("sweeping main coin");
                     sweep_main(conf, c, crypto).await?;
                 }
                 BalanceState::Tokens { tokens_balance } => {
-                    println!("sweeping tokens");
+                    info!("sweeping tokens");
                     sweep_tokens(&conf, c, &crypto, tokens_balance).await?;
                 }
                 BalanceState::TokensMain {
                     tokens_balance,
                     balance: _,
                 } => {
-                    println!("sweeping tokens and main coin");
+                    info!("sweeping tokens and main coin");
                     sweep_tokens(&conf, c, &crypto, tokens_balance).await?;
                     sweep_main(conf, c, crypto).await?;
                 }
@@ -128,29 +128,25 @@ async fn refill_all(
         let val = g_price * 21000;
         let hash = send_main(sweeper_prvk, &m_a.address, val, provider).await?;
         let mut info = tx_info(hash, provider).await?;
-        println!("--------------------");
-        println!("{:?}", info);
         while info.transaction_index.is_none() {
-            println!("waiting for confirmation...");
+            info!("waiting for confirmation...");
             thread::sleep(time::Duration::from_secs(5));
             info = tx_info(hash, provider).await?;
         }
-        println!("---------confirmed-----------");
-        println!("{:?}", info)
+        info!("---------confirmed-----------");
+        info!("{:?}", info.hash)
     }
     for m_a in token_addrs {
         let g_price = gas_price(provider).await?;
         let val = g_price * 2 * 65000;
         let hash = send_main(sweeper_prvk, &m_a.address, val, provider).await?;
         let mut info = tx_info(hash, provider).await?;
-        println!("--------------------");
-        println!("{:?}", info);
         while info.transaction_index.is_none() {
             thread::sleep(time::Duration::from_secs(5));
             info = tx_info(hash, provider).await?;
         }
-        println!("---------confirmed-----------");
-        println!("{:?}", info)
+        info!("---------confirmed-----------");
+        info!("{:?}", info.hash)
     }
     Ok(())
 }
@@ -158,6 +154,6 @@ async fn refill_all(
 async fn generate_hd_prase() {
     let a = Mnemonic::new(bip39::MnemonicType::Words12, bip39::Language::English);
     let phrase = a.into_phrase();
-    println!("-----------");
-    println!("{:?}", phrase);
+    info!("-----------");
+    info!("{:?}", phrase);
 }

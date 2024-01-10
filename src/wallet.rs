@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use std::thread::sleep_ms;
+use std::{thread, time};
 
 use ::sha256::digest;
 use bip39::Language;
@@ -26,6 +26,7 @@ use crate::error::Error;
 use crate::tron::calls::{transfer_trc20, transfer_trx};
 use crate::types::*;
 
+use log::info;
 use stellar_sdk::{utils::Endpoint, CallBuilder, Keypair, Server};
 
 #[derive(Debug, Clone)]
@@ -113,11 +114,16 @@ impl HDWallet {
         }
     }
 
-    pub async fn sweep(&self, index: i32, to: &str, provider: &str) -> Result<(Transaction,U256), Error> {
+    pub async fn sweep(
+        &self,
+        index: i32,
+        to: &str,
+        provider: &str,
+    ) -> Result<(Transaction, U256), Error> {
         match self {
             HDWallet::Ethereum(seed) => eth_sweep_main(seed, index, to, provider).await,
             HDWallet::Tron(seed) => tron_sweep_main(seed, index, to, provider).await,
-            HDWallet::Stellar(_master_key) => Err(Error::CurrencyNotImplementedError)
+            HDWallet::Stellar(_master_key) => Err(Error::CurrencyNotImplementedError),
         }
     }
 
@@ -127,7 +133,7 @@ impl HDWallet {
         addr: &str,
         to: &str,
         provider: &str,
-    ) -> Result<(Transaction,U256), Error> {
+    ) -> Result<(Transaction, U256), Error> {
         match self {
             HDWallet::Ethereum(seed) => {
                 eth_sweep_token(seed, index, addr, to, provider, Crypto::Eth).await
@@ -135,10 +141,9 @@ impl HDWallet {
             HDWallet::Tron(seed) => {
                 tron_sweep_token(seed, index, addr, to, provider, Crypto::Tron).await
             }
-            HDWallet::Stellar(_seed) => Err(Error::CurrencyNotImplementedError) 
+            HDWallet::Stellar(_seed) => Err(Error::CurrencyNotImplementedError),
         }
     }
-
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -153,7 +158,7 @@ impl EthAddr {
         }
         //check that passed str is a hex string
         hex::decode(&proper_addr[2..]).map_err(|e| {
-            println!("String passed into EthAddr is not hex.");
+            info!("String passed into EthAddr is not hex.");
             e
         })?;
         //check length
@@ -424,7 +429,7 @@ async fn stellar_balance(seed: &str, index: i32, provider: &str) -> Result<U256,
             bal = b.balance.parse::<f64>()?;
         }
     }
-    println!("bal: {:?}", bal);
+    info!("bal: {:?}", bal);
     Ok(U256::zero())
 }
 
@@ -433,62 +438,57 @@ async fn eth_sweep_main(
     index: i32,
     to_str: &str,
     provider: &str,
-) -> Result<(Transaction,U256), Error> {
+) -> Result<(Transaction, U256), Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index)?;
     let prvk_str = eth_private_by_index(seed, index)?;
     let prvk = web3::signing::SecretKey::from_str(&prvk_str)?;
     let addr = H160::from_str(&addr_str)?;
-    println!("sweeping main token from for: {:?}",&addr_str);
+    info!("sweeping main token from for: {:?}", &addr_str);
     let to = Address::from_str(to_str)?;
     let gas_price = web3.eth().gas_price().await?;
     let bal = web3.eth().balance(addr, None).await?;
-    println!("balance: {:?}", bal);
     let fee = gas_price * 21000 * 5;
-    println!("gas_price: {:?}", gas_price);
-    println!("fee: {:?}", fee);
     let val_to_send = if bal > fee {
-            Ok(bal - fee)}
-        else {
-            Err(Error::NotEnoughBalanceError(bal, fee,addr_str))
-        }?;
-    println!("debug3");
+        Ok(bal - fee)
+    } else {
+        Err(Error::NotEnoughBalanceError(bal, fee, addr_str))
+    }?;
     let tx_object = TransactionParameters {
         to: Some(to),
         value: val_to_send,
         ..Default::default()
     };
-    println!("sweeping val {:?}",val_to_send);
+    info!("sweeping val {:?}", val_to_send);
     let signed = web3.accounts().sign_transaction(tx_object, &prvk).await?;
     let res = web3
         .eth()
         .send_raw_transaction(signed.raw_transaction)
-        .await
-        .map(|hash| hash)?;
-    println!("res {:?}",res);
+        .await?;
+    info!("res {:?}", res);
     let mut t_tx = web3
         .eth()
         .transaction(web3::types::TransactionId::Hash(res))
         .await?
         .ok_or(Error::Web3NoTransactionError(res));
     let mut counter = 0;
-    while t_tx.err().is_some() && counter < 10{
+    while t_tx.err().is_some() && counter < 10 {
         counter += 1;
-        println!("waiting for confirmation...");
-        sleep_ms(5000);
+        info!("waiting for confirmation...");
+        thread::sleep(time::Duration::from_secs(5));
         t_tx = web3
-        .eth()
-        .transaction(web3::types::TransactionId::Hash(res))
-        .await?
-        .ok_or(Error::Web3NoTransactionError(res));
+            .eth()
+            .transaction(web3::types::TransactionId::Hash(res))
+            .await?
+            .ok_or(Error::Web3NoTransactionError(res));
     }
     let tx = web3
         .eth()
         .transaction(web3::types::TransactionId::Hash(res))
         .await?
-        .ok_or(Error::Web3NoTransactionError(res))?;//NTD make it cleaner
-    Ok((tx,fee))
+        .ok_or(Error::Web3NoTransactionError(res))?; //NTD make it cleaner
+    Ok((tx, fee))
 }
 
 async fn tron_sweep_main(
@@ -496,7 +496,7 @@ async fn tron_sweep_main(
     index: i32,
     to_str: &str,
     provider: &str,
-) -> Result<(Transaction,U256), Error> {
+) -> Result<(Transaction, U256), Error> {
     let addr_str = tron_address_by_index(seed, index)?;
     let from = tron_to_hex_raw(&addr_str)?;
     let to = tron_to_hex_raw(to_str)?;
@@ -504,22 +504,22 @@ async fn tron_sweep_main(
     let bal = tron_balance(seed, index, provider).await?;
     let fee = U256::from(1200000);
     let val_to_send = if bal > fee {
-            Ok(bal - fee)}
-        else {
-            Err(Error::NotEnoughBalanceError(bal, fee,addr_str))
-        }?;
+        Ok(bal - fee)
+    } else {
+        Err(Error::NotEnoughBalanceError(bal, fee, addr_str))
+    }?;
     let amount = val_to_send.as_u64() as i64;
     let res = transfer_trx(&from, &to, &prvk_str, amount).await?;
     let mut t_tx = tx_info(H256::from_str(&res)?, provider).await;
     let mut counter = 0;
     while t_tx.err().is_some() && counter < 10 {
         counter += 1;
-        println!("waiting for confirmation...");
-        sleep_ms(5000);
+        info!("waiting for confirmation...");
+        thread::sleep(time::Duration::from_secs(5));
         t_tx = tx_info(H256::from_str(&res)?, provider).await;
     }
     let tx = tx_info(H256::from_str(&res)?, provider).await?;
-    Ok((tx,fee))
+    Ok((tx, fee))
 }
 
 async fn eth_balance_token(
@@ -662,7 +662,7 @@ async fn eth_sweep_token(
     to_str: &str,
     provider: &str,
     _: Crypto,
-) -> Result<(Transaction,U256), Error> {
+) -> Result<(Transaction, U256), Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let addr_str = eth_address_by_index(seed, index)?;
@@ -679,21 +679,17 @@ async fn eth_sweep_token(
     let balance_of: U256 = contract
         .query("balanceOf", (addr,), None, Options::default(), None)
         .await?;
-    println!("balance_of: {:?}", &balance_of);
+    info!("balance_of: {:?}", &balance_of);
     let gas_est = contract
         .estimate_gas("transfer", (to, balance_of), addr, Options::default())
         .await?;
 
     let gas_price = web3.eth().gas_price().await?;
     let fee = gas_est * gas_price;
-    println!("================");
-    println!("gas_price: {:?}", &gas_price);
-    println!("gas_est: {:?}", &gas_est);
-    println!("fee: {:?}", &fee);
     let res = contract
         .signed_call("transfer", (to, balance_of), Options::default(), &prvk)
         .await?;
-    println!("token_receipt: {:?}", res);
+    info!("token_receipt: {:?}", res);
     let mut t_tx = web3
         .eth()
         .transaction(web3::types::TransactionId::Hash(res))
@@ -702,20 +698,20 @@ async fn eth_sweep_token(
     let mut counter = 0;
     while t_tx.err().is_some() && counter < 10 {
         counter += 1;
-        println!("waiting for confirmation...");
-        sleep_ms(5000);
+        info!("waiting for confirmation...");
+        thread::sleep(time::Duration::from_secs(5));
         t_tx = web3
-        .eth()
-        .transaction(web3::types::TransactionId::Hash(res))
-        .await?
-        .ok_or(Error::Web3NoTransactionError(res));
+            .eth()
+            .transaction(web3::types::TransactionId::Hash(res))
+            .await?
+            .ok_or(Error::Web3NoTransactionError(res));
     }
     let tx = web3
         .eth()
         .transaction(web3::types::TransactionId::Hash(res))
         .await?
-        .ok_or(Error::Web3NoTransactionError(res))?;//NTD make it cleaner
-    Ok((tx,fee))
+        .ok_or(Error::Web3NoTransactionError(res))?; //NTD make it cleaner
+    Ok((tx, fee))
 }
 
 async fn tron_sweep_token(
@@ -725,7 +721,7 @@ async fn tron_sweep_token(
     to_str: &str,
     provider: &str,
     _: Crypto,
-) -> Result<(Transaction,U256), Error> {
+) -> Result<(Transaction, U256), Error> {
     let transport = web3::transports::Http::new(provider)?;
     let web3 = web3::Web3::new(transport);
     let prvk_str = tron_private_by_index(seed, index)?;
@@ -750,12 +746,12 @@ async fn tron_sweep_token(
     let mut counter = 0;
     while t_tx.err().is_some() && counter < 10 {
         counter += 1;
-        println!("waiting for confirmation...");
-        sleep_ms(5000);
+        info!("waiting for confirmation...");
+        thread::sleep(time::Duration::from_secs(5));
         t_tx = tx_info(H256::from_str(&res)?, provider).await;
     }
-    let tx =tx_info(H256::from_str(&res)?, provider).await?;
-    Ok((tx.clone(),tx.gas*tx.gas_price.unwrap()))
+    let tx = tx_info(H256::from_str(&res)?, provider).await?;
+    Ok((tx.clone(), tx.gas * tx.gas_price.unwrap()))
 }
 
 pub async fn gas_price(provider: &str) -> Result<U256, Error> {
@@ -807,7 +803,7 @@ pub async fn send_main(
         .eth()
         .send_raw_transaction(signed.raw_transaction)
         .await?;
-    println!("Tx succeeded with hash: {:?}", result);
+    info!("Tx succeeded with hash: {:?}", result);
     Ok(result)
 }
 
@@ -854,4 +850,3 @@ pub fn tron_to_hex_raw(addr: &str) -> Result<String, Error> {
         Ok(hex_str)
     }
 }
-

@@ -1,6 +1,6 @@
 use ethers::types::H256;
 use std::{str::FromStr, thread, time};
-use web3::types::{U256, Transaction};
+use web3::types::{Transaction, U256};
 
 use crate::{
     error::Error,
@@ -39,7 +39,7 @@ pub async fn sweep_main(conf: Settings, i: u32, crypto: Crypto) -> Result<(), Er
         crypto
     );
     let res = hdw.sweep(i as i32, &to, &provider).await?;
-    println!("{:?}",res);
+    println!("{:?}", res);
     Ok(())
 }
 
@@ -91,7 +91,7 @@ pub async fn sweep_tokens(
         .await?;
     };
     for (tok, _) in tokens {
-        let (tx,_)= hdw.sweep_token(i as i32, &tok, to, provider).await?;
+        let (tx, _) = hdw.sweep_token(i as i32, &tok, to, provider).await?;
         println!("sweeped: {:?}", tx);
         let mut info = tx_info(tx.hash, provider).await?;
         while info.transaction_index.is_none() {
@@ -137,9 +137,14 @@ pub async fn refill_address(
     println!("--------------------");
     println!("{:?}", info);
     let mut counter = 0;
-    while (info.as_mut().is_none() || info.as_mut().is_some_and(|inf| inf.transaction_index.is_none())) && counter < 10 {
+    while (info.as_mut().is_none()
+        || info
+            .as_mut()
+            .is_some_and(|inf| inf.transaction_index.is_none()))
+        && counter < 10
+    {
         counter += 1;
-        println!("waiting for confirmation... {:?}",hash);
+        println!("waiting for confirmation... {:?}", hash);
         thread::sleep(time::Duration::from_secs(5));
         info = (tx_info(hash, provider).await).ok();
     }
