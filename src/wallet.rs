@@ -731,29 +731,19 @@ async fn tron_sweep_token(
     let prvk_str = tron_private_by_index(seed, index)?;
     let addr_str = tron_address_by_index_hex(seed, index)?;
     let addr_hex_str = tron_address_by_index(seed, index)?;
-    println!("----------------------------------");
-    println!("addr_str {:?}", addr_str);
-    println!("addr_str_hex {:?}", &addr_hex_str);
     let to = tron_to_hex_raw(to_str)?;
-    println!("to {:?}", to);
     let from = tron_to_hex_raw(&addr_hex_str)?;
-    println!("from {:?}", from);
     let addr = H160::from_str(&addr_str)?;
-    println!("addr {:?}", addr);
     let token_address = H160::from_str(&tron_to_hex(token_addr)?)?;
-    println!("token_address {:?}", token_address);
     let contract = Contract::from_json(
         web3.eth(),
         token_address,
         include_bytes!("../res/erc20.abi.json"),
     )?;
-    println!("contract {:?}", contract);
     let balance_of: U256 = contract
         .query("balanceOf", (addr,), None, Options::default(), None)
         .await?;
-    println!("balance_of {:?}", balance_of);
     let amount = balance_of.as_u64() as i64;
-    println!("amount {:?}", amount);
 
     let res = transfer_trc20(&from, &to, &prvk_str, amount, token_addr).await?;
     let mut t_tx = tx_info(H256::from_str(&res)?, provider).await;
