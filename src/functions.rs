@@ -132,20 +132,19 @@ pub async fn refill_address(
             println!("waiting for transaction {:?}...", hash);
             thread::sleep(time::Duration::from_secs(5));
         }
-        r_info?
+        Some(r_info?)
     };
     println!("--------------------");
     println!("{:?}", info);
     let mut counter = 0;
-    while info.transaction_index.is_none() && counter < 10 {
+    while (info.as_mut().is_none() || info.as_mut().is_some_and(|inf| inf.transaction_index.is_none())) && counter < 10 {
         counter += 1;
         println!("waiting for confirmation... {:?}",hash);
         thread::sleep(time::Duration::from_secs(5));
-        info = tx_info(hash, provider).await?;
+        info = (tx_info(hash, provider).await).ok();
     }
     println!("---------confirmed-----------");
-    println!("{:?}", info);
-    Ok(info)
+    Ok(info.unwrap())
 }
 
 pub async fn privkey_print(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(), Error> {
