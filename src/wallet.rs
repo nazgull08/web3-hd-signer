@@ -740,7 +740,7 @@ async fn tron_sweep_token(
     println!("from {:?}", from);
     let addr = H160::from_str(&addr_str)?;
     println!("addr {:?}", addr);
-    let token_address = H160::from_str(token_addr)?;
+    let token_address = H160::from_str(&tron_to_hex(token_addr)?)?;
     println!("token_address {:?}", token_address);
     let contract = Contract::from_json(
         web3.eth(),
