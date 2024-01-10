@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::thread::sleep_ms;
 
 use ::sha256::digest;
 use bip39::Language;
@@ -466,11 +467,25 @@ async fn eth_sweep_main(
         .await
         .map(|hash| hash)?;
     println!("res {:?}",res);
+    let mut t_tx = web3
+        .eth()
+        .transaction(web3::types::TransactionId::Hash(res))
+        .await?
+        .ok_or(Error::Web3NoTransactionError(res));
+    while t_tx.err().is_some() {
+        println!("waiting for confirmation...");
+        sleep_ms(5000);
+        t_tx = web3
+        .eth()
+        .transaction(web3::types::TransactionId::Hash(res))
+        .await?
+        .ok_or(Error::Web3NoTransactionError(res));
+    }
     let tx = web3
         .eth()
         .transaction(web3::types::TransactionId::Hash(res))
         .await?
-        .ok_or(Error::Web3NoTransactionError(res))?;
+        .ok_or(Error::Web3NoTransactionError(res))?;//NTD make it cleaner
     Ok((tx,fee))
 }
 
