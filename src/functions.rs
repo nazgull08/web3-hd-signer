@@ -124,10 +124,11 @@ pub async fn refill_address(
     };
     println!("{:?}", hash);
     let mut info = {
-        let r_info = tx_info(hash, provider).await;
+        let mut r_info = tx_info(hash, provider).await;
         let mut counter = 0;
         while r_info.is_err() && counter < 10 {
             counter += 1;
+            r_info = tx_info(hash, provider).await;
             println!("waiting for transaction {:?}...", hash);
             thread::sleep(time::Duration::from_secs(5));
         }
