@@ -689,22 +689,28 @@ async fn eth_sweep_token(
     let res = contract
         .signed_call("transfer", (to, balance_of), Options::default(), &prvk)
         .await?;
-    info!("token_receipt: {:?}", res);
     let mut t_tx = web3
         .eth()
         .transaction(web3::types::TransactionId::Hash(res))
         .await?
         .ok_or(Error::Web3NoTransactionError(res));
+    println!(
+        "trying to send tokens USDT:{:?}, to:{:?}, result: {:?} ",
+        balance_of, to, t_tx
+    );
     let mut counter = 0;
     while t_tx.err().is_some() && counter < 120 {
         counter += 1;
-        info!("waiting for confirmation...");
         thread::sleep(time::Duration::from_secs(60));
         t_tx = web3
             .eth()
             .transaction(web3::types::TransactionId::Hash(res))
             .await?
             .ok_or(Error::Web3NoTransactionError(res));
+        println!(
+            "trying({:?}) to send tokens USDT:{:?}, to:{:?}, result: {:?} ",
+            counter, balance_of, to, t_tx
+        );
     }
     let tx = web3
         .eth()
@@ -743,12 +749,19 @@ async fn tron_sweep_token(
 
     let res = transfer_trc20(&from, &to, &prvk_str, amount, token_addr).await?;
     let mut t_tx = tx_info(H256::from_str(&res)?, provider).await;
+    println!(
+        "trying to send tokens USDTTron:{:?}, to:{:?}, result: {:?} ",
+        balance_of, to, t_tx
+    );
     let mut counter = 0;
     while t_tx.err().is_some() && counter < 120 {
         counter += 1;
-        info!("waiting for confirmation...");
         thread::sleep(time::Duration::from_secs(60));
         t_tx = tx_info(H256::from_str(&res)?, provider).await;
+        println!(
+            "trying({:?}) to send tokens USDT:{:?}, to:{:?}, result: {:?} ",
+            counter, balance_of, to, t_tx
+        );
     }
     let tx = tx_info(H256::from_str(&res)?, provider).await?;
     Ok((tx.clone(), tx.gas * tx.gas_price.unwrap()))
@@ -803,7 +816,10 @@ pub async fn send_main(
         .eth()
         .send_raw_transaction(signed.raw_transaction)
         .await?;
-    info!("Tx succeeded with hash: {:?}", result);
+    info!(
+        "Tx val:{:?} to:{:?} published with hash: {:?}",
+        val, to, result
+    );
     Ok(result)
 }
 

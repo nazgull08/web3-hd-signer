@@ -114,13 +114,23 @@ pub async fn refill_address(
 ) -> Result<Transaction, Error> {
     let hash = match crypto {
         Crypto::Tron => {
-            let amount = 10120000;
+            let amount = 27600000;
             let sweeper_addr = tron_to_hex_raw(sweeper_tron_address)?;
             let to = tron_to_hex_raw(addr)?;
             //
+            println!(
+                "trying to refill {:?} for {:?} TRX from {:?}",
+                addr, amount, sweeper_tron_address
+            );
             H256::from_str(&transfer_trx(&sweeper_addr, &to, sweeper_prvk, amount).await?)?
         }
-        _ => send_main(sweeper_prvk, addr, val, provider).await?,
+        _ => {
+            println!(
+                "trying to refill {:?} for {:?} TRX from {:?}",
+                addr, val, sweeper_tron_address
+            );
+            send_main(sweeper_prvk, addr, val, provider).await?
+        }
     };
     println!("{:?}", hash);
     let mut info = {
@@ -129,7 +139,7 @@ pub async fn refill_address(
         while r_info.is_err() && counter < 120 {
             counter += 1;
             r_info = tx_info(hash, provider).await;
-            println!("waiting for transaction {:?}...", hash);
+            println!("waiting for refilling transaction {:?} to {:?}", hash, addr);
             thread::sleep(time::Duration::from_secs(60));
         }
         Some(r_info?)

@@ -26,11 +26,10 @@ pub async fn transfer_trx(
     priv_key: &str,
     amount: i64,
 ) -> Result<String, Error> {
-    println!("============================================");
-    println!("c_from {:?}", c_from);
-    println!("c_to {:?}", c_to);
-    println!("amount {:?}", amount);
-    println!("============================================");
+    println!(
+        "sending TRX value {:?} from {:?} to {:?}",
+        c_from, c_to, amount
+    );
     let mut client = get_client().await;
     let from = hex::decode(c_from).expect("decode error");
     let to = hex::decode(c_to).expect("decode error");
@@ -103,7 +102,7 @@ pub async fn transfer_trx(
         .await
         .expect("broadcast error");
     println!("result: {:?}", &result);
-    Ok(hex::encode(txid).to_string())
+    Ok(hex::encode(txid))
 }
 
 pub async fn transfer_trc20(
@@ -118,9 +117,9 @@ pub async fn transfer_trc20(
     let to = hex::decode(c_to).expect("decode error");
     let amount: ethers::types::U256 = U256::from(amount);
     let secret_obj = private::Private::from_hex(priv_key).expect("decode error");
-    let test_1 = "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj".to_owned();
-    println!("contract_addr {:?}", contract_addr);
-    let contract_addr_bytes = base58::decode(&test_1).expect("decode error");
+    //let test_1 = "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj".to_owned();
+    //println!("contract_addr {:?}", contract_addr);
+    let contract_addr_bytes = base58::decode(contract_addr).expect("decode error");
 
     let now_block = client
         .get_now_block2(EmptyMessage {})
@@ -132,7 +131,7 @@ pub async fn transfer_trc20(
     let param_data =
         ethers::contract::encode_function_data(fn_obj, (Address::from_slice(&to[1..]), amount))
             .expect("encode fn param error");
-    println!("param data:{}", hex::encode(param_data.as_ref()));
+    //println!("param data:{}", hex::encode(param_data.as_ref()));
 
     let contract_type = tron_grpc::transaction::contract::ContractType::TriggerSmartContract;
     let transfer_tx = tron_grpc::TriggerSmartContract {
@@ -199,15 +198,19 @@ pub async fn transfer_trc20(
     let _ = req.encode(&mut raw_bytes);
     println!("req len:{}", raw_bytes.len());
 
+    println!(
+        "sending USDT Tron value {:?} from {:?} to {:?}",
+        c_from, c_to, amount
+    );
     let result = client
         .broadcast_transaction(req)
         .await
         .expect("broadcast error");
-    println!("result: {:?}", &result);
+    println!("trying to publish USDT Tron transaction: {:?}", &result);
     let result = result.into_inner();
     println!(
         "message:{}",
         String::from_utf8(result.message).expect("decode message error")
     );
-    Ok(hex::encode(txid).to_string())
+    Ok(hex::encode(txid))
 }
