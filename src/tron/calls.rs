@@ -43,10 +43,14 @@ pub async fn transfer_trx(
 
     let contract_type = tron_grpc::transaction::contract::ContractType::TransferContract;
     let transfer_tx = tron_grpc::TransferContract {
-        owner_address: from,
-        to_address: to,
+        owner_address: from.clone(),
+        to_address: to.clone(),
         amount,
     };
+    println!(
+        "transfer TRX value {:?} from {:?} to {:?}",
+        from, to, amount
+    );
 
     let mut raw_bytes: Vec<u8> = Vec::new();
     let _ = transfer_tx.encode(&mut raw_bytes);
