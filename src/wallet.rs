@@ -449,7 +449,7 @@ async fn eth_sweep_main(
     let to = Address::from_str(to_str)?;
     let gas_price = web3.eth().gas_price().await?;
     let bal = web3.eth().balance(addr, None).await?;
-    let fee = gas_price * 21000 * 5;
+    let fee = gas_price * 21000 * 2;
     let val_to_send = if bal > fee {
         Ok(bal - fee)
     } else {

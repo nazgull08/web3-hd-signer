@@ -47,10 +47,6 @@ pub async fn transfer_trx(
         to_address: to.clone(),
         amount,
     };
-    println!(
-        "transfer TRX value {:?} from {:?} to {:?}",
-        from, to, amount
-    );
 
     let mut raw_bytes: Vec<u8> = Vec::new();
     let _ = transfer_tx.encode(&mut raw_bytes);
