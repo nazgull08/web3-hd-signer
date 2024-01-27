@@ -175,7 +175,9 @@ pub async fn privkey_print(conf: &Settings, i: u32, crypto: &Crypto) -> Result<(
     };
 
     let addr_i = hdw.address(i as i32)?;
+    let priv_key = hdw.private(i as i32)?;
     println!("addr: {:?}", addr_i);
+    println!("priv_key: {:?}", priv_key);
     Ok(())
 }
 
