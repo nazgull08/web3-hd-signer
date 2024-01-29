@@ -13,11 +13,9 @@ use tonic::transport::Channel;
 use super::private::Private;
 
 async fn get_client() -> WalletClient<Channel> {
-    tron_grpc::wallet_client::WalletClient::connect(
-        "grpc://grpc.trongrid.io:50051".to_string(),
-    )
-    .await
-    .expect("connect error")
+    tron_grpc::wallet_client::WalletClient::connect("grpc://grpc.trongrid.io:50051".to_string())
+        .await
+        .expect("connect error")
 }
 
 pub async fn transfer_trx(
